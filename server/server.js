@@ -567,7 +567,35 @@ io.on('connection', (socket) => {
       player.color = selectedColor;
       if (visorColor) player.visorColor = visorColor;
       if (operativeTitle) player.operativeTitle = operativeTitle;
-      if (characterId) player.characterId = characterId;
+    }
+
+    // Auto-launch / Stay in Lobby rule: game stays in lobby until 3 players log in
+    if (room.phase === 'LOBBY') {
+      if (room.players.length >= 3) {
+        if (!room.launchCountdownTimeout) {
+          room.chatMessages.push({
+            id: Date.now().toString(),
+            sender: 'DREADNOUGHT AI',
+            text: `⚠️ 3 OPERATIVES LOGGED IN (${room.players.length}/3)! Redirecting squad to main battle map in 3 seconds...`,
+            system: true
+          });
+          broadcastRoomState(cleanRoom);
+
+          room.launchCountdownTimeout = setTimeout(() => {
+            const currentRoom = rooms.get(cleanRoom);
+            if (currentRoom && currentRoom.phase === 'LOBBY' && currentRoom.players.length >= 3) {
+              launchGameMission(cleanRoom);
+            }
+          }, 3000);
+        }
+      } else {
+        room.chatMessages.push({
+          id: Date.now().toString(),
+          sender: 'DREADNOUGHT AI',
+          text: `Operative ${player.username} logged into lobby (${room.players.length}/3 players needed to deploy to main map).`,
+          system: true
+        });
+      }
     }
 
     broadcastRoomState(cleanRoom);
@@ -608,44 +636,83 @@ io.on('connection', (socket) => {
     broadcastRoomState(roomId);
   });
 
-  // 4. Start Game (With Dynamic Imposter Scaling & Central Deployment)
+// =============================================================================
+// MISSION LAUNCH & MAP REDIRECTION ENGINE (STAY IN LOBBY UNTIL 3 PLAYERS)
+// =============================================================================
+function launchGameMission(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  if (room.players.length < 3) return;
+
+  // Clear any pending countdowns
+  if (room.launchCountdownTimeout) {
+    clearTimeout(room.launchCountdownTimeout);
+    room.launchCountdownTimeout = null;
+  }
+
+  // Reset Terminals & Game Metrics
+  room.terminals = createInitialTerminals();
+  room.gameWinner = null;
+  room.winReason = null;
+  room.lastEjection = null;
+  room.emergencyCaller = null;
+
+  // Calculate Imposters based on player count and host settings
+  const imposterCount = calculateImposterCount(room.players.length, room.imposterSetting);
+  const shuffled = [...room.players].sort(() => 0.5 - Math.random());
+
+  // Distinct sector spawn positions across the Dreadnought map
+  const sectorSpawns = [
+    { x: 1200, y: 700 },  // Central Corridor
+    { x: 500, y: 400 },   // Quantum Mainframe
+    { x: 1900, y: 400 },  // Sensor Array
+    { x: 450, y: 1000 },  // Security Vault
+    { x: 1950, y: 1000 }, // Bio-Lab
+    { x: 1200, y: 1400 }, // Reactor Core
+    { x: 1000, y: 350 },  // Command Bridge
+    { x: 1400, y: 350 }   // Nav Deck
+  ];
+
+  room.players.forEach((p, index) => {
+    p.role = 'DEV';
+    p.isAlive = true;
+    p.votedFor = null;
+    const sp = sectorSpawns[index % sectorSpawns.length];
+    p.x = sp.x;
+    p.y = sp.y;
+    p.isMoving = false;
+    p.facingLeft = false;
+  });
+
+  for (let i = 0; i < imposterCount; i++) {
+    shuffled[i].role = 'MAFIA';
+  }
+
+  room.chatMessages.push({
+    sender: 'DREADNOUGHT AI',
+    text: `🚀 3 OPERATIVES CONFIRMED! All players have been redirected from the lobby to the main Dreadnought map!`,
+    system: true
+  });
+
+  // Start with 90s Day Sprint
+  startPhaseTimer(roomId, 'DAY', 90);
+
+  io.to(roomId).emit('mission_redirect', {
+    message: '3 Operatives confirmed! You have been redirected to the main Dreadnought map.',
+    phase: 'DAY'
+  });
+}
+
+  // 4. Start Game (Host Manual Launch - Requires 3 Operatives)
   socket.on('start_game', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room || room.hostId !== socket.id) return;
-    if (room.players.length < 2) {
-      socket.emit('error_message', 'At least 2 operatives are required to initiate spaceship dreadnought mission.');
+    if (room.players.length < 3) {
+      socket.emit('error_message', `The game stays in the lobby until at least 3 players log in. Currently logged in: ${room.players.length}/3.`);
       return;
     }
 
-    // Reset Terminals & Game Metrics
-    room.terminals = createInitialTerminals();
-    room.gameWinner = null;
-    room.winReason = null;
-    room.lastEjection = null;
-    room.emergencyCaller = null;
-    room.chatMessages = [];
-
-    // Calculate Imposters based on player count and host settings
-    const imposterCount = calculateImposterCount(room.players.length, room.imposterSetting);
-    const shuffled = [...room.players].sort(() => 0.5 - Math.random());
-
-    room.players.forEach((p, index) => {
-      p.role = 'DEV';
-      p.isAlive = true;
-      p.votedFor = null;
-      // Spawn scattered across Central Atrium Hub (x: 1050-1350, y: 800-1000)
-      p.x = 1080 + ((index * 50) % 240);
-      p.y = 860 + (Math.floor(index / 5) * 45);
-      p.isMoving = false;
-      p.facingLeft = false;
-    });
-
-    for (let i = 0; i < imposterCount; i++) {
-      shuffled[i].role = 'MAFIA';
-    }
-
-    // Start with 90s Day Sprint
-    startPhaseTimer(roomId, 'DAY', 90);
+    launchGameMission(roomId);
   });
 
   // 5. Player Movement (Supported in both LOBBY and Active Phases)
@@ -807,8 +874,19 @@ io.on('connection', (socket) => {
         }
         if (room.players.length === 0) {
           if (room.timerInterval) clearInterval(room.timerInterval);
+          if (room.launchCountdownTimeout) clearTimeout(room.launchCountdownTimeout);
           rooms.delete(rId);
         } else {
+          if (room.phase === 'LOBBY' && room.players.length < 3 && room.launchCountdownTimeout) {
+            clearTimeout(room.launchCountdownTimeout);
+            room.launchCountdownTimeout = null;
+            room.chatMessages.push({
+              id: Date.now().toString(),
+              sender: 'DREADNOUGHT AI',
+              text: `⚠️ An operative disconnected. Game will stay in lobby until 3 players log in (${room.players.length}/3).`,
+              system: true
+            });
+          }
           checkWinConditions(rId);
           broadcastRoomState(rId);
         }

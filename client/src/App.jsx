@@ -298,7 +298,16 @@ export default function App() {
     socket.on('disconnect', onDisconnect);
 
     socket.on('room_update', (data) => {
-      setPhase(data.phase);
+      setPhase((prevPhase) => {
+        // When transitioning from LOBBY to DAY, redirect player to their assigned main map coordinates
+        if (prevPhase === 'LOBBY' && data.phase === 'DAY') {
+          const self = (data.players || []).find((p) => p.id === socket.id);
+          if (self && self.x && self.y) {
+            setLocalPos({ x: self.x, y: self.y });
+          }
+        }
+        return data.phase;
+      });
       setTimer(data.timer);
       setHostId(data.hostId);
       setIsHost(data.isHost);
@@ -1714,13 +1723,38 @@ export default function App() {
               zIndex: 15
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', fontWeight: 800, color: '#38bdf8' }}>
-                SPACESHIP ROSTER ({players.length})
+                LOBBY ROSTER ({players.length}/3 MINIMUM)
               </span>
               <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                 Host: {players.find((p) => p.id === hostId)?.username || 'Connecting...'}
               </span>
+            </div>
+
+            {/* 3-Player Lobby Gate Status */}
+            <div
+              style={{
+                padding: '8px 10px',
+                backgroundColor: players.length >= 3 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                border: players.length >= 3 ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '6px',
+                marginBottom: '10px',
+                fontSize: '11px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: players.length >= 3 ? '#34d399' : '#f87171' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: players.length >= 3 ? '#10b981' : '#ef4444' }} />
+                <span>{players.length >= 3 ? 'SQUAD READY (3/3 LOGGED IN)' : `WAITING FOR 3 PLAYERS (${players.length}/3)`}</span>
+              </div>
+              <div style={{ fontSize: '10px', color: '#cbd5e1' }}>
+                {players.length >= 3
+                  ? '3 players logged in! Redirecting to main battle map...'
+                  : `Game stays in lobby until 3 players log in (need ${3 - players.length} more).`}
+              </div>
             </div>
 
             {/* Imposter Scaling Info & Setting */}
@@ -1832,26 +1866,28 @@ export default function App() {
             {isHost ? (
               <button
                 onClick={() => socket.emit('start_game', { roomId })}
-                disabled={players.length < 2}
+                disabled={players.length < 3}
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: players.length >= 2 ? '#0284c7' : '#334155',
+                  backgroundColor: players.length >= 3 ? '#0284c7' : '#334155',
                   border: 'none',
                   borderRadius: '6px',
                   color: '#ffffff',
                   fontSize: '12px',
                   fontWeight: 800,
                   letterSpacing: '1px',
-                  cursor: players.length >= 2 ? 'pointer' : 'not-allowed',
-                  boxShadow: players.length >= 2 ? '0 0 15px rgba(2, 132, 199, 0.5)' : 'none'
+                  cursor: players.length >= 3 ? 'pointer' : 'not-allowed',
+                  boxShadow: players.length >= 3 ? '0 0 15px rgba(2, 132, 199, 0.5)' : 'none'
                 }}
               >
-                {players.length >= 2 ? 'INITIATE SPACESHIP MISSION ➔' : 'NEED 2+ OPERATIVES TO LAUNCH'}
+                {players.length >= 3 ? 'REDIRECT SQUAD TO MAIN MAP ➔' : `LOBBY LOCKED (${players.length}/3 PLAYERS)`}
               </button>
             ) : (
               <div style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8', padding: '8px' }}>
-                Waiting for host to launch mission...
+                {players.length >= 3
+                  ? '3 players in lobby! Redirecting to main map...'
+                  : `Game stays in lobby until 3 players log in (${players.length}/3)...`}
               </div>
             )}
           </div>
