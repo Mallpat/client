@@ -93,9 +93,84 @@ const RANDOM_NAMES = [
   'Avenger_Prime'
 ];
 
-// Map Dimensions (Dreadnought Megastructure)
-const MAP_WIDTH = 2400;
-const MAP_HEIGHT = 1800;
+// Map Dimensions (Expanded Dreadnought Megastructure: 3600 x 2700)
+const MAP_WIDTH = 3600;
+const MAP_HEIGHT = 2700;
+
+// Walkable Starship Deck Regions (Rooms and Overlapping Corridors)
+const WALKABLE_BOXES = [
+  // Central Atrium & Waiting Deck
+  { id: 'atrium', x1: 1340, y1: 1040, x2: 2260, y2: 1660 },
+
+  // Sector 1: Command Bridge (North)
+  { id: 'bridge', x1: 1340, y1: 180, x2: 2260, y2: 800 },
+  // North Corridor (Bridge <-> Atrium)
+  { id: 'corr_n', x1: 1720, y1: 760, x2: 1880, y2: 1080 },
+
+  // Sector 2: AI & Quantum Mainframe (North-West)
+  { id: 'mainframe', x1: 250, y1: 200, x2: 1050, y2: 850 },
+  // North-West Corridor (Mainframe <-> Central North)
+  { id: 'corr_nw', x1: 1010, y1: 560, x2: 1380, y2: 720 },
+
+  // Sector 3: Communications & Sensor Array (North-East)
+  { id: 'sensors', x1: 2550, y1: 200, x2: 3350, y2: 850 },
+  // North-East Corridor (Central North <-> Sensors)
+  { id: 'corr_ne', x1: 2220, y1: 560, x2: 2590, y2: 720 },
+
+  // Sector 4: Security & Surveillance Vault (West)
+  { id: 'vault', x1: 200, y1: 1100, x2: 1000, y2: 1850 },
+  // West Corridor (Vault <-> Central Atrium)
+  { id: 'corr_w', x1: 960, y1: 1320, x2: 1380, y2: 1480 },
+
+  // Sector 5: Cybernetics & Bio-Lab (East)
+  { id: 'biolab', x1: 2600, y1: 1100, x2: 3400, y2: 1850 },
+  // East Corridor (Central Atrium <-> Bio-Lab)
+  { id: 'corr_e', x1: 2220, y1: 1320, x2: 2640, y2: 1480 },
+
+  // Sector 6: Quantum Hyper-Reactor Core (South)
+  { id: 'reactor', x1: 1340, y1: 1900, x2: 2260, y2: 2550 },
+  // South Corridor (Central Atrium <-> Reactor)
+  { id: 'corr_s', x1: 1720, y1: 1620, x2: 1880, y2: 1940 },
+
+  // West Auxiliary Corridor (Mainframe <-> Vault)
+  { id: 'corr_aux_w', x1: 580, y1: 810, x2: 720, y2: 1140 },
+
+  // East Auxiliary Corridor (Sensors <-> Bio-Lab)
+  { id: 'corr_aux_e', x1: 2880, y1: 810, x2: 3020, y2: 1140 }
+];
+
+function isPositionWalkable(x, y, phase) {
+  const R = 14; // Operative hit-box collision radius
+
+  if (phase === 'LOBBY') {
+    // Strictly restricted inside Central Waiting Deck Room:
+    if (x < 1360 || x > 2240 || y < 1060 || y > 1640) {
+      return false;
+    }
+    // Prop Barriers in Lobby
+    if (Math.hypot(x - 1800, y - 1350) < 46) return false; // Central Emergency Standup
+    if (x >= 1515 && x <= 1585 && y >= 1105 && y <= 1195) return false; // Wardrobe Pod
+    return true;
+  }
+
+  // Active Game (DAY / NIGHT): Must be inside at least one walkable room or corridor
+  const inDeck = WALKABLE_BOXES.some(
+    (b) => x >= b.x1 + R && x <= b.x2 - R && y >= b.y1 + R && y <= b.y2 - R
+  );
+  if (!inDeck) return false;
+
+  // Specific solid prop obstacles & containment barriers across all sectors
+  if (Math.hypot(x - 1800, y - 1350) < 46) return false; // Central Emergency Standup
+  if (Math.hypot(x - 1800, y - 2250) < 60) return false; // Reactor Core Containment
+  if (Math.hypot(x - 1800, y - 400) < 44) return false;  // Hologram Table Pedestal
+  if (Math.hypot(x - 650, y - 500) < 40) return false;   // Mainframe Fan Pedestal
+  if (Math.hypot(x - 2950, y - 500) < 42) return false;  // Radar Console Pedestal
+  if (Math.hypot(x - 550, y - 1450) < 40) return false;  // Vault Console Pedestal
+  if (Math.hypot(x - 3050, y - 1450) < 44) return false; // Bio-Lab Cryo-Stasis Chamber
+  if (x >= 1515 && x <= 1585 && y >= 1105 && y <= 1195) return false; // Wardrobe Pod
+
+  return true;
+}
 
 function EliminationCinematicModal({ cutscene, onClose }) {
   const canvasRef = useRef(null);
@@ -257,7 +332,7 @@ export default function App() {
   const [emergencyCaller, setEmergencyCaller] = useState(null);
 
   // Local Player & Canvas state
-  const [localPos, setLocalPos] = useState({ x: 1200, y: 900 });
+  const [localPos, setLocalPos] = useState({ x: 1800, y: 1350 });
   const [activeTerminal, setActiveTerminal] = useState(null); // terminal opened in IDE modal
   const [terminalCode, setTerminalCode] = useState('');
   const [testResults, setTestResults] = useState(null);
@@ -489,9 +564,25 @@ export default function App() {
         walkCycleRef.current += 0.22;
 
         setLocalPos((prev) => {
-          // Clamp to dreadnought outer boundaries
-          const nextX = Math.max(120, Math.min(MAP_WIDTH - 120, prev.x + dx * SPEED));
-          const nextY = Math.max(120, Math.min(MAP_HEIGHT - 120, prev.y + dy * SPEED));
+          let nextX = prev.x;
+          let nextY = prev.y;
+
+          const targetX = prev.x + dx * SPEED;
+          const targetY = prev.y + dy * SPEED;
+
+          if (isPositionWalkable(targetX, targetY, phase)) {
+            nextX = targetX;
+            nextY = targetY;
+          } else {
+            // Slide along X axis if possible
+            if (isPositionWalkable(targetX, prev.y, phase)) {
+              nextX = targetX;
+            }
+            // Slide along Y axis if possible
+            if (isPositionWalkable(prev.x, targetY, phase)) {
+              nextY = targetY;
+            }
+          }
 
           // Throttle socket move emit to 30Hz
           const now = Date.now();
@@ -531,287 +622,333 @@ export default function App() {
       ctx.save();
       ctx.translate(-cameraX, -cameraY);
 
-      // Deep Space Starfield & Cosmic Dust
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      for (let i = 0; i < 180; i++) {
-        const starX = (i * 137.5) % MAP_WIDTH;
-        const starY = (i * 97.3) % MAP_HEIGHT;
-        const starSize = (i % 3 === 0) ? 2 : 1;
+      // Deep Space Starfield & Cosmic Dust (350+ Stars across 3600 x 2700 Megastructure)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      for (let i = 0; i < 350; i++) {
+        const starX = (i * 137.508) % MAP_WIDTH;
+        const starY = (i * 97.319) % MAP_HEIGHT;
+        const starSize = (i % 4 === 0) ? 2.5 : (i % 2 === 0 ? 1.5 : 1);
         ctx.fillRect(starX, starY, starSize, starSize);
       }
 
       // =======================================================================
-      // DRAW PROCEDURAL 2400 x 1800 DREADNOUGHT SECTORS & HIGH-GRAPHIC PROPS
+      // DRAW EXPANDED 3600 x 2700 DREADNOUGHT MEGASTRUCTURE SECTORS & PROPS
       // =======================================================================
       const time = Date.now() / 1000;
 
-      // Outer Hull Silhouette
-      ctx.fillStyle = '#0b0f19';
+      // Outer Starship Armor Hull & Space Shielding
+      ctx.fillStyle = '#070b14';
       ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 14;
+      ctx.lineWidth = 20;
       ctx.beginPath();
-      ctx.rect(100, 100, MAP_WIDTH - 200, MAP_HEIGHT - 200);
+      ctx.rect(80, 80, MAP_WIDTH - 160, MAP_HEIGHT - 160);
       ctx.stroke();
       ctx.fill();
 
-      // Sector 1: Command Bridge (North: x: 850-1550, y: 100-550)
+      // Interconnecting Tactical Corridors (Drawn behind room walls)
+      ctx.fillStyle = '#0d1527';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 6;
+
+      // North Corridor (Atrium <-> Bridge)
+      ctx.fillRect(1720, 760, 160, 320);
+      ctx.strokeRect(1720, 760, 160, 320);
+      // South Corridor (Atrium <-> Reactor)
+      ctx.fillRect(1720, 1620, 160, 320);
+      ctx.strokeRect(1720, 1620, 160, 320);
+      // West Corridor (Vault <-> Atrium)
+      ctx.fillRect(960, 1320, 420, 160);
+      ctx.strokeRect(960, 1320, 420, 160);
+      // East Corridor (Atrium <-> Bio-Lab)
+      ctx.fillRect(2220, 1320, 420, 160);
+      ctx.strokeRect(2220, 1320, 420, 160);
+      // North-West Corridor (Mainframe <-> Atrium North)
+      ctx.fillRect(1010, 560, 370, 160);
+      ctx.strokeRect(1010, 560, 370, 160);
+      // North-East Corridor (Atrium North <-> Sensors)
+      ctx.fillRect(2220, 560, 370, 160);
+      ctx.strokeRect(2220, 560, 370, 160);
+      // West Auxiliary Corridor (Mainframe <-> Vault)
+      ctx.fillRect(580, 810, 140, 330);
+      ctx.strokeRect(580, 810, 140, 330);
+      // East Auxiliary Corridor (Sensors <-> Bio-Lab)
+      ctx.fillRect(2880, 810, 140, 330);
+      ctx.strokeRect(2880, 810, 140, 330);
+
+      // Floor Chevron Directional Markings
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+      for (let cy = 800; cy < 1040; cy += 40) {
+        ctx.beginPath();
+        ctx.moveTo(1780, cy);
+        ctx.lineTo(1800, cy - 12);
+        ctx.lineTo(1820, cy);
+        ctx.stroke();
+      }
+      for (let cy = 1680; cy < 1900; cy += 40) {
+        ctx.beginPath();
+        ctx.moveTo(1780, cy);
+        ctx.lineTo(1800, cy + 12);
+        ctx.lineTo(1820, cy);
+        ctx.stroke();
+      }
+
+      // Sector 1: Command Bridge (North: x: 1340-2260, y: 180-800)
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4;
-      ctx.fillRect(850, 100, 700, 450);
-      ctx.strokeRect(850, 100, 700, 450);
+      ctx.lineWidth = 8;
+      ctx.fillRect(1340, 180, 920, 620);
+      ctx.strokeRect(1340, 180, 920, 620);
 
-      // Holographic 3D Star-Chart Projector (Terminal 1 at 1200, 240)
+      // Panoramic Forward Observation Viewport
+      ctx.fillStyle = '#030712';
+      ctx.fillRect(1440, 190, 720, 55);
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(1440, 190, 720, 55);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = "bold 10px 'JetBrains Mono', monospace";
+      ctx.textAlign = 'center';
+      ctx.fillText('FORWARD TACTICAL VIEWPORT // DEEP SPACE SECTOR OMEGA', 1800, 222);
+
+      // Holographic 3D Star-Chart Projector & Terminal 1 at (1800, 400)
       ctx.save();
-      ctx.translate(1200, 240);
-      // Projector Pedestal
+      ctx.translate(1800, 400);
       ctx.beginPath();
-      ctx.arc(0, 0, 48, 0, Math.PI * 2);
+      ctx.arc(0, 0, 56, 0, Math.PI * 2);
       ctx.fillStyle = '#1e293b';
       ctx.fill();
       ctx.strokeStyle = '#0284c7';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
 
       // Rotating Hologram Wireframe Globe
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(0, 0, 32, 0, Math.PI * 2);
+      ctx.arc(0, 0, 38, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.ellipse(0, 0, 32, Math.abs(Math.cos(time)) * 32, time, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 38, Math.abs(Math.cos(time)) * 38, time, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.ellipse(0, 0, Math.abs(Math.sin(time)) * 32, 32, -time, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, Math.abs(Math.sin(time)) * 38, 38, -time, 0, Math.PI * 2);
       ctx.stroke();
 
       // Orbiting Data Glint
       ctx.fillStyle = '#38bdf8';
       ctx.beginPath();
-      ctx.arc(Math.cos(time * 2) * 36, Math.sin(time * 2) * 36, 4, 0, Math.PI * 2);
+      ctx.arc(Math.cos(time * 2) * 44, Math.sin(time * 2) * 44, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Sector 2: AI & Quantum Mainframe (North-West: x: 200-750, y: 150-600)
+      // Sector 2: AI & Quantum Mainframe (North-West: x: 250-1050, y: 200-850)
       ctx.fillStyle = '#090d16';
       ctx.strokeStyle = '#6366f1';
-      ctx.lineWidth = 4;
-      ctx.fillRect(200, 150, 550, 450);
-      ctx.strokeRect(200, 150, 550, 450);
+      ctx.lineWidth = 8;
+      ctx.fillRect(250, 200, 800, 650);
+      ctx.strokeRect(250, 200, 800, 650);
 
-      // Server Monoliths with Data Lights (Terminal 2 at 550, 320)
-      for (let r = 0; r < 3; r++) {
-        const sx = 260 + r * 90;
+      // Supercomputer Server Racks with Blinking LED Matrix
+      for (let r = 0; r < 4; r++) {
+        const sx = 320 + r * 110;
         ctx.fillStyle = '#1e1e2d';
-        ctx.fillRect(sx, 220, 50, 240);
+        ctx.fillRect(sx, 280, 60, 360);
         ctx.strokeStyle = '#4f46e5';
         ctx.lineWidth = 2;
-        ctx.strokeRect(sx, 220, 50, 240);
+        ctx.strokeRect(sx, 280, 60, 360);
 
-        // Blinking bus lights
-        for (let b = 0; b < 6; b++) {
-          const isBlink = Math.sin(time * 5 + r + b) > 0;
+        for (let b = 0; b < 9; b++) {
+          const isBlink = Math.sin(time * 5 + r * 2 + b) > 0;
           ctx.fillStyle = isBlink ? '#10b981' : '#312e81';
-          ctx.fillRect(sx + 8, 235 + b * 34, 10, 8);
+          ctx.fillRect(sx + 10, 300 + b * 36, 14, 10);
           ctx.fillStyle = !isBlink ? '#38bdf8' : '#1e1b4b';
-          ctx.fillRect(sx + 28, 235 + b * 34, 10, 8);
+          ctx.fillRect(sx + 36, 300 + b * 36, 14, 10);
         }
       }
 
-      // Spinning Mainframe Cooling Fans
+      // Spinning Quantum Mainframe Cooling Fan & Terminal 2 at (650, 500)
       ctx.save();
-      ctx.translate(550, 320);
+      ctx.translate(650, 500);
       ctx.beginPath();
-      ctx.arc(0, 0, 42, 0, Math.PI * 2);
+      ctx.arc(0, 0, 50, 0, Math.PI * 2);
       ctx.fillStyle = '#0f172a';
       ctx.fill();
       ctx.strokeStyle = '#6366f1';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
-      // Fan Blades
       for (let f = 0; f < 4; f++) {
         const bladeAngle = time * 6 + (f * Math.PI) / 2;
         ctx.fillStyle = '#4338ca';
         ctx.beginPath();
-        ctx.arc(Math.cos(bladeAngle) * 20, Math.sin(bladeAngle) * 20, 10, 0, Math.PI * 2);
+        ctx.arc(Math.cos(bladeAngle) * 26, Math.sin(bladeAngle) * 26, 12, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
 
-      // Sector 3: Communications & Sensor Array (North-East: x: 1650-2200, y: 150-600)
+      // Sector 3: Communications & Sensor Array (North-East: x: 2550-3350, y: 200-850)
       ctx.fillStyle = '#0c1322';
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
-      ctx.fillRect(1650, 150, 550, 450);
-      ctx.strokeRect(1650, 150, 550, 450);
+      ctx.lineWidth = 8;
+      ctx.fillRect(2550, 200, 800, 650);
+      ctx.strokeRect(2550, 200, 800, 650);
 
-      // Rotating Radar Terminal (Terminal 3 at 1850, 320)
+      // Rotating Radar Dish & Terminal 3 at (2950, 500)
       ctx.save();
-      ctx.translate(1850, 320);
+      ctx.translate(2950, 500);
       ctx.beginPath();
-      ctx.arc(0, 0, 46, 0, Math.PI * 2);
+      ctx.arc(0, 0, 54, 0, Math.PI * 2);
       ctx.fillStyle = '#0b1329';
       ctx.fill();
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
 
-      // Radar Sweep Line
-      const sweepAngle = time * 2;
+      const sweepAngle = time * 2.2;
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(sweepAngle) * 44, Math.sin(sweepAngle) * 44);
+      ctx.lineTo(Math.cos(sweepAngle) * 52, Math.sin(sweepAngle) * 52);
       ctx.stroke();
 
-      // Oscilloscope Grid Rings
-      ctx.strokeStyle = 'rgba(245, 158, 11, 0.3)';
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
       ctx.beginPath();
-      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, 44, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
 
-      // Sector 4: Security & Surveillance Vault (West: x: 150-700, y: 750-1250)
+      // Sector 4: Security & Surveillance Vault (West: x: 200-1000, y: 1100-1850)
       ctx.fillStyle = '#14141d';
       ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 4;
-      ctx.fillRect(150, 750, 550, 500);
-      ctx.strokeRect(150, 750, 550, 500);
+      ctx.lineWidth = 8;
+      ctx.fillRect(200, 1100, 800, 750);
+      ctx.strokeRect(200, 1100, 800, 750);
 
-      // Curved Surveillance Wall (Terminal 4 at 380, 950)
+      // Security Surveillance Command Wall & Terminal 4 at (550, 1450)
       ctx.save();
-      ctx.translate(380, 950);
+      ctx.translate(550, 1450);
       ctx.beginPath();
-      ctx.arc(0, 0, 50, 0, Math.PI * 2);
+      ctx.arc(0, 0, 56, 0, Math.PI * 2);
       ctx.fillStyle = '#1a1016';
       ctx.fill();
       ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
-      // Holographic Security Eye
+
       ctx.strokeStyle = '#f87171';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(0, 0, 20, 0, Math.PI * 2);
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
-      ctx.arc(Math.cos(time * 3) * 6, Math.sin(time * 3) * 6, 8, 0, Math.PI * 2);
+      ctx.arc(Math.cos(time * 3) * 8, Math.sin(time * 3) * 8, 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Sector 5: Cybernetics & Bio-Lab (East: x: 1700-2250, y: 750-1250)
+      // Sector 5: Cybernetics & Bio-Lab (East: x: 2600-3400, y: 1100-1850)
       ctx.fillStyle = '#061a1e';
       ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 4;
-      ctx.fillRect(1700, 750, 550, 500);
-      ctx.strokeRect(1700, 750, 550, 500);
+      ctx.lineWidth = 8;
+      ctx.fillRect(2600, 1100, 800, 750);
+      ctx.strokeRect(2600, 1100, 800, 750);
 
-      // Bubbling Cryo-Stasis Chamber (Terminal 5 at 2000, 950)
+      // Cryo-Stasis Chamber & Terminal 5 at (3050, 1450)
       ctx.save();
-      ctx.translate(2000, 950);
+      ctx.translate(3050, 1450);
       ctx.beginPath();
-      ctx.arc(0, 0, 50, 0, Math.PI * 2);
+      ctx.arc(0, 0, 56, 0, Math.PI * 2);
       ctx.fillStyle = '#032420';
       ctx.fill();
       ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
 
-      // DNA Double-Helix Projection
+      // DNA Double-Helix Hologram Projection
       ctx.strokeStyle = '#34d399';
-      ctx.lineWidth = 2;
-      for (let d = -25; d <= 25; d += 10) {
-        const offset = Math.sin(time * 3 + d * 0.15) * 14;
+      ctx.lineWidth = 2.5;
+      for (let d = -32; d <= 32; d += 12) {
+        const offset = Math.sin(time * 3 + d * 0.15) * 16;
         ctx.beginPath();
         ctx.moveTo(d, -offset);
         ctx.lineTo(d, offset);
         ctx.stroke();
         ctx.fillStyle = '#10b981';
-        ctx.fillRect(d - 2, -offset - 2, 4, 4);
-        ctx.fillRect(d - 2, offset - 2, 4, 4);
+        ctx.fillRect(d - 2.5, -offset - 2.5, 5, 5);
+        ctx.fillRect(d - 2.5, offset - 2.5, 5, 5);
       }
       ctx.restore();
 
-      // Sector 6: Quantum Hyper-Reactor Core (South: x: 850-1550, y: 1250-1750)
+      // Sector 6: Quantum Hyper-Reactor Core (South: x: 1340-2260, y: 1900-2550)
       ctx.fillStyle = '#110c1c';
       ctx.strokeStyle = '#8b5cf6';
-      ctx.lineWidth = 4;
-      ctx.fillRect(850, 1250, 700, 500);
-      ctx.strokeRect(850, 1250, 700, 500);
+      ctx.lineWidth = 8;
+      ctx.fillRect(1340, 1900, 920, 650);
+      ctx.strokeRect(1340, 1900, 920, 650);
 
-      // Swirling Plasma Reactor Core (Terminal 6 at 1200, 1550)
+      // Colossal Plasma Reactor Core & Terminal 6 at (1800, 2250)
       ctx.save();
-      ctx.translate(1200, 1550);
-      // Outer containment
+      ctx.translate(1800, 2250);
       ctx.beginPath();
-      ctx.arc(0, 0, 68, 0, Math.PI * 2);
+      ctx.arc(0, 0, 78, 0, Math.PI * 2);
       ctx.fillStyle = '#0f0a1e';
       ctx.fill();
       ctx.strokeStyle = '#8b5cf6';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.stroke();
 
       // Counter-rotating magnetic rings
       ctx.strokeStyle = '#a855f7';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 52, 22, time * 1.5, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 60, 26, time * 1.5, 0, Math.PI * 2);
       ctx.stroke();
       ctx.strokeStyle = '#c084fc';
       ctx.beginPath();
-      ctx.ellipse(0, 0, 52, 22, -time * 1.5, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 60, 26, -time * 1.5, 0, Math.PI * 2);
       ctx.stroke();
 
       // Pulsing Plasma Sphere
-      const plasmaPulse = Math.sin(time * 4) * 5;
-      const plasmaGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 28 + plasmaPulse);
+      const plasmaPulse = Math.sin(time * 4) * 6;
+      const plasmaGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 34 + plasmaPulse);
       plasmaGrad.addColorStop(0, '#ffffff');
       plasmaGrad.addColorStop(0.4, '#c084fc');
       plasmaGrad.addColorStop(1, 'rgba(139, 92, 246, 0.1)');
       ctx.fillStyle = plasmaGrad;
       ctx.beginPath();
-      ctx.arc(0, 0, 28 + plasmaPulse, 0, Math.PI * 2);
+      ctx.arc(0, 0, 34 + plasmaPulse, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Central Hub / Grand Atrium (Center: x: 850-1550, y: 650-1150)
-      ctx.fillStyle = '#0b1120';
+      // Central Hub / Grand Assembly Atrium & Waiting Deck (x: 1340-2260, y: 1040-1660)
+      ctx.fillStyle = '#0b1329';
       ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 4;
-      ctx.fillRect(850, 650, 700, 500);
-      ctx.strokeRect(850, 650, 700, 500);
+      ctx.lineWidth = 8;
+      ctx.fillRect(1340, 1040, 920, 620);
+      ctx.strokeRect(1340, 1040, 920, 620);
 
-      // Connecting Corridors Floor Tiles & Chevrons
-      ctx.fillStyle = 'rgba(51, 65, 85, 0.4)';
-      ctx.fillRect(700, 320, 150, 100);  // West to Center-North
-      ctx.fillRect(1550, 320, 100, 100); // Center-North to East
-      ctx.fillRect(700, 900, 150, 100);  // West to Center
-      ctx.fillRect(1550, 900, 150, 100); // Center to East
-      ctx.fillRect(1150, 550, 100, 100); // North to Center
-      ctx.fillRect(1150, 1150, 100, 100);// Center to South
-
-      // Central Emergency Quarantine Lockdown Beacon at (1200, 900)
+      // Central Emergency Standup Beacon at (1800, 1350)
       ctx.save();
-      ctx.translate(1200, 900);
+      ctx.translate(1800, 1350);
       ctx.beginPath();
-      ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.arc(0, 0, 64, 0, Math.PI * 2);
       ctx.fillStyle = '#1e293b';
       ctx.fill();
       ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      const pulseEmergency = Math.sin(time * 4) * 6;
+      const pulseEmergency = Math.sin(time * 4) * 7;
       ctx.beginPath();
-      ctx.arc(0, 0, 24 + pulseEmergency, 0, Math.PI * 2);
+      ctx.arc(0, 0, 26 + pulseEmergency, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.arc(0, 0, 26, 0, Math.PI * 2);
       ctx.fillStyle = '#dc2626';
       ctx.fill();
       ctx.strokeStyle = '#ef4444';
@@ -824,41 +961,105 @@ export default function App() {
       ctx.fillText('STANDUP', 0, 4);
       ctx.restore();
 
-      // Decontamination Mirror & Wardrobe Pod at (1050, 750)
+      // Decontamination Wardrobe Pod at (1550, 1150)
       ctx.save();
-      ctx.translate(1050, 750);
+      ctx.translate(1550, 1150);
       ctx.fillStyle = '#1e1b4b';
-      ctx.fillRect(-35, -45, 70, 90);
+      ctx.fillRect(-38, -48, 76, 96);
       ctx.strokeStyle = '#818cf8';
       ctx.lineWidth = 3;
-      ctx.strokeRect(-35, -45, 70, 90);
+      ctx.strokeRect(-38, -48, 76, 96);
 
-      // Sweeping Laser Scan Line
-      const scanY = Math.sin(time * 3) * 35;
+      const scanY = Math.sin(time * 3) * 38;
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(-30, scanY);
-      ctx.lineTo(30, scanY);
+      ctx.moveTo(-32, scanY);
+      ctx.lineTo(32, scanY);
       ctx.stroke();
 
       ctx.font = "bold 9px 'JetBrains Mono', monospace";
       ctx.fillStyle = '#c7d2fe';
       ctx.textAlign = 'center';
-      ctx.fillText('WARDROBE', 0, 58);
+      ctx.fillText('WARDROBE', 0, 62);
       ctx.restore();
 
-      // Room Name Banners
-      ctx.font = "bold 13px 'JetBrains Mono', monospace";
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
+      // =======================================================================
+      // SPECIFIC BARRIERS: LOBBY LOCKDOWN FORCEFIELDS vs ACTIVE GAME CLEARANCE
+      // =======================================================================
+      if (phase === 'LOBBY') {
+        // Glowing Red Laser Forcefield Barriers across all 4 exits of the Lobby:
+        const drawLaserBarrier = (x1, y1, x2, y2, label, isHorizontal) => {
+          ctx.save();
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 7;
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 16;
+          const flicker = Math.sin(time * 18 + x1) * 2;
+          ctx.beginPath();
+          if (isHorizontal) {
+            ctx.moveTo(x1, y1 + flicker);
+            ctx.lineTo(x2, y2 - flicker);
+          } else {
+            ctx.moveTo(x1 + flicker, y1);
+            ctx.lineTo(x2 - flicker, y2);
+          }
+          ctx.stroke();
+
+          // Laser grid ribs
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+          ctx.lineWidth = 2;
+          if (isHorizontal) {
+            for (let lx = x1 + 10; lx < x2; lx += 18) {
+              ctx.beginPath();
+              ctx.moveTo(lx, y1 - 18);
+              ctx.lineTo(lx, y1 + 18);
+              ctx.stroke();
+            }
+          } else {
+            for (let ly = y1 + 10; ly < y2; ly += 18) {
+              ctx.beginPath();
+              ctx.moveTo(x1 - 18, ly);
+              ctx.lineTo(x1 + 18, ly);
+              ctx.stroke();
+            }
+          }
+
+          ctx.font = "bold 9px 'JetBrains Mono', monospace";
+          ctx.fillStyle = '#fca5a5';
+          ctx.textAlign = 'center';
+          ctx.fillText(label, (x1 + x2) / 2, (y1 + y2) / 2 - (isHorizontal ? 22 : 0));
+          ctx.restore();
+        };
+
+        // North Exit (to Bridge)
+        drawLaserBarrier(1720, 1040, 1880, 1040, '🔒 FORCEFIELD // LOBBY LOCKED', true);
+        // South Exit (to Reactor)
+        drawLaserBarrier(1720, 1660, 1880, 1660, '🔒 FORCEFIELD // LOBBY LOCKED', true);
+        // West Exit (to Vault)
+        drawLaserBarrier(1340, 1320, 1340, 1480, '🔒 LOCKED', false);
+        // East Exit (to Bio-Lab)
+        drawLaserBarrier(2260, 1320, 2260, 1480, '🔒 LOCKED', false);
+      } else {
+        // In Game: Green Clearance Lights across open doorways
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(1720, 1036, 160, 8);
+        ctx.fillRect(1720, 1656, 160, 8);
+        ctx.fillRect(1336, 1320, 8, 160);
+        ctx.fillRect(2256, 1320, 8, 160);
+      }
+
+      // Room Name Banners across Sectors
+      ctx.font = "bold 15px 'JetBrains Mono', monospace";
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
       ctx.textAlign = 'center';
-      ctx.fillText('COMMAND BRIDGE [SECTOR 1]', 1200, 135);
-      ctx.fillText('AI MAINFRAME [SECTOR 2]', 475, 180);
-      ctx.fillText('COMMS & SENSORS [SECTOR 3]', 1925, 180);
-      ctx.fillText('SECURITY VAULT [SECTOR 4]', 425, 780);
-      ctx.fillText('BIO-CYBER LAB [SECTOR 5]', 1975, 780);
-      ctx.fillText('QUANTUM REACTOR [SECTOR 6]', 1200, 1280);
-      ctx.fillText('CENTRAL ASSEMBLY ATRIUM', 1200, 680);
+      ctx.fillText('COMMAND BRIDGE [SECTOR 1]', 1800, 270);
+      ctx.fillText('AI & QUANTUM MAINFRAME [SECTOR 2]', 650, 250);
+      ctx.fillText('COMMUNICATIONS & SENSORS [SECTOR 3]', 2950, 250);
+      ctx.fillText('SECURITY & SURVEILLANCE VAULT [SECTOR 4]', 600, 1160);
+      ctx.fillText('CYBERNETICS & BIO-LAB [SECTOR 5]', 3000, 1160);
+      ctx.fillText('QUANTUM HYPER-REACTOR CORE [SECTOR 6]', 1800, 1960);
+      ctx.fillText('CENTRAL ASSEMBLY ATRIUM (WAITING DECK)', 1800, 1090);
 
       // =======================================================================
       // DRAW 6 ACTIVE TERMINAL STATUS BLIPS
@@ -1017,16 +1218,16 @@ export default function App() {
         }
       });
 
-      // Check Emergency Beacon (1200, 900)
-      if (!foundAction && Math.hypot(localPos.x - 1200, localPos.y - 900) < 70) {
+      // Check Emergency Beacon (1800, 1350)
+      if (!foundAction && Math.hypot(localPos.x - 1800, localPos.y - 1350) < 80) {
         foundAction = {
           type: 'emergency',
           name: 'Central Lockdown Beacon'
         };
       }
 
-      // Check Wardrobe Pod (1050, 750)
-      if (!foundAction && Math.hypot(localPos.x - 1050, localPos.y - 750) < 70) {
+      // Check Wardrobe Pod (1550, 1150)
+      if (!foundAction && Math.hypot(localPos.x - 1550, localPos.y - 1150) < 80) {
         foundAction = {
           type: 'wardrobe',
           name: 'Decontamination Wardrobe Pod'
@@ -1900,9 +2101,9 @@ export default function App() {
               position: 'absolute',
               top: '20px',
               right: '20px',
-              width: '180px',
-              height: '135px',
-              backgroundColor: 'rgba(9, 13, 22, 0.9)',
+              width: '200px',
+              height: '150px',
+              backgroundColor: 'rgba(9, 13, 22, 0.92)',
               border: '1px solid #334155',
               borderRadius: '8px',
               boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
@@ -1913,13 +2114,13 @@ export default function App() {
           >
             {/* Map Rooms Outline in miniature */}
             <div style={{ position: 'absolute', inset: 0, opacity: 0.35 }}>
-              <div style={{ position: 'absolute', left: '35%', top: '5%', width: '30%', height: '25%', border: '1px solid #38bdf8' }} /> {/* Bridge */}
-              <div style={{ position: 'absolute', left: '8%', top: '8%', width: '22%', height: '25%', border: '1px solid #6366f1' }} />  {/* AI */}
-              <div style={{ position: 'absolute', left: '70%', top: '8%', width: '22%', height: '25%', border: '1px solid #f59e0b' }} /> {/* Comms */}
-              <div style={{ position: 'absolute', left: '6%', top: '42%', width: '22%', height: '28%', border: '1px solid #ef4444' }} />  {/* Vault */}
-              <div style={{ position: 'absolute', left: '72%', top: '42%', width: '22%', height: '28%', border: '1px solid #10b981' }} /> {/* Bio */}
-              <div style={{ position: 'absolute', left: '35%', top: '36%', width: '30%', height: '28%', border: '1px solid #64748b' }} /> {/* Atrium */}
-              <div style={{ position: 'absolute', left: '35%', top: '70%', width: '30%', height: '25%', border: '1px solid #8b5cf6' }} /> {/* Reactor */}
+              <div style={{ position: 'absolute', left: '37%', top: '7%', width: '26%', height: '23%', border: '1px solid #38bdf8' }} />  {/* Bridge */}
+              <div style={{ position: 'absolute', left: '7%', top: '7%', width: '22%', height: '24%', border: '1px solid #6366f1' }} />   {/* AI Mainframe */}
+              <div style={{ position: 'absolute', left: '71%', top: '7%', width: '22%', height: '24%', border: '1px solid #f59e0b' }} />  {/* Comms & Sensors */}
+              <div style={{ position: 'absolute', left: '6%', top: '41%', width: '22%', height: '28%', border: '1px solid #ef4444' }} />   {/* Security Vault */}
+              <div style={{ position: 'absolute', left: '72%', top: '41%', width: '22%', height: '28%', border: '1px solid #10b981' }} />  {/* Bio-Lab */}
+              <div style={{ position: 'absolute', left: '37%', top: '38%', width: '26%', height: '23%', border: '1px solid #64748b' }} />  {/* Central Atrium */}
+              <div style={{ position: 'absolute', left: '37%', top: '70%', width: '26%', height: '24%', border: '1px solid #8b5cf6' }} />  {/* Reactor Core */}
             </div>
 
             {/* Terminal Status Blips */}
@@ -1928,8 +2129,8 @@ export default function App() {
                 key={t.id}
                 style={{
                   position: 'absolute',
-                  left: `${(t.x / MAP_WIDTH) * 180 - 3}px`,
-                  top: `${(t.y / MAP_HEIGHT) * 135 - 3}px`,
+                  left: `${(t.x / MAP_WIDTH) * 200 - 3}px`,
+                  top: `${(t.y / MAP_HEIGHT) * 150 - 3}px`,
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
@@ -1942,8 +2143,8 @@ export default function App() {
             <div
               style={{
                 position: 'absolute',
-                left: `${(localPos.x / MAP_WIDTH) * 180 - 4}px`,
-                top: `${(localPos.y / MAP_HEIGHT) * 135 - 4}px`,
+                left: `${(localPos.x / MAP_WIDTH) * 200 - 4}px`,
+                top: `${(localPos.y / MAP_HEIGHT) * 150 - 4}px`,
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
@@ -1954,7 +2155,7 @@ export default function App() {
             />
 
             <div style={{ position: 'absolute', bottom: '4px', right: '6px', fontSize: '8px', color: '#64748b' }}>
-              RADAR // 2400x1800
+              RADAR // 3600x2700 MEGASTRUCTURE
             </div>
           </div>
         )}

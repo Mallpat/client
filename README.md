@@ -34,15 +34,25 @@ A 2D top-down cyberpunk social deduction & engineering arena built with **React 
   - Defeated players leave behind iconic memorial remnants on the ship floor (Cap's shield embedded in the deck, Thor's Mjolnir sparking, Iron Man's glowing Arc Reactor, Hulk's gamma crater, Spidey's mask, Doctor Strange's Eye of Agamotto, etc.).
   - Eliminated players transition into ethereal translucent ghost mode (`👻`) to observe or solve remaining terminals!
 
-### 4. Massive 2400 × 1800 Dreadnought Megastructure (8 Themed Sectors)
-1. **Command Bridge [Sector 1]** (North: `x: 850-1550, y: 100-550`): **Terminal 1: Hyperspace Matrix Rotation** (`rotateMatrix90(matrix)`).
-2. **AI & Quantum Mainframe [Sector 2]** (North-West: `x: 200-750, y: 150-600`): **Terminal 2: LRU Cache Eviction** (`evictStaleKeys(cache, maxAge)`).
-3. **Communications & Sensor Array [Sector 3]** (North-East: `x: 1650-2200, y: 150-600`): **Terminal 3: Signal Packet Defragmenter** (`defragmentPackets(packets)`).
-4. **Security & Defense Vault [Sector 4]** (West: `x: 150-700, y: 750-1250`): **Terminal 4: Cryptographic Checksum** (`validateSecurityChecksum(str)`).
-5. **Cybernetics & Bio-Lab [Sector 5]** (East: `x: 1700-2250, y: 750-1250`): **Terminal 5: Gene Sequence Splicer** (`spliceNucleotides(dna, target)`).
-6. **Quantum Hyper-Reactor Core [Sector 6]** (South: `x: 850-1550, y: 1250-1750`): **Terminal 6: Plasma Pressure Convergence** (`convergePlasmaFrequency(base, target)`).
-7. **Central Assembly Atrium** (Center: `x: 850-1550, y: 650-1150`): Central Lockdown Beacon & Wardrobe Pod.
-8. **Power Grid Substation & Armory** (South-West / South-East): Tesla coils and auxiliary capacitors.
+### 4. Colossal 3600 × 2700 Dreadnought Megastructure & Specific Barrier Physics
+- **Expanded Map Scale (2.25x Area)**: The starship has been expanded to **3600 × 2700** with massive, dedicated sector rooms, wide inter-sector corridors with chevrons, and thick industrial metallic bulkheads.
+- **Physical Room Wall Collisions & Wall Sliding**:
+  - Operatives cannot walk out of the rooms into deep space or penetrate solid metallic walls.
+  - Smooth 2D AABB wall-sliding physics ensures fluid navigation against walls and doorways.
+- **Specific Obstacle Barriers**:
+  - Solid collisions for consoles, the pulsing Plasma Reactor containment, cooling fans, stasis tubes, Wardrobe pods, and the Central Standup Beacon.
+- **Lobby Forcefield Barriers**:
+  - In the Lobby phase, all 4 corridor exits out of the Central Waiting Deck are blocked by animated **Red Laser Forcefield Barriers** (`🔒 FORCEFIELD // LOBBY LOCKED`), keeping operatives securely inside the room until 3 players log in!
+  - Upon 3 players assembling, the forcefield disengages, doors illuminate green, and squad members are deployed across the sectors!
+
+1. **Command Bridge [Sector 1]** (North: `x: 1340-2260, y: 180-800`): **Terminal 1: Hyperspace Matrix Rotation** (`rotateMatrix90(matrix)`).
+2. **AI & Quantum Mainframe [Sector 2]** (North-West: `x: 250-1050, y: 200-850`): **Terminal 2: LRU Cache Eviction** (`evictStaleKeys(cache, maxAge)`).
+3. **Communications & Sensor Array [Sector 3]** (North-East: `x: 2550-3350, y: 200-850`): **Terminal 3: Signal Packet Defragmenter** (`defragmentPackets(packets)`).
+4. **Security & Surveillance Vault [Sector 4]** (West: `x: 200-1000, y: 1100-1850`): **Terminal 4: Cryptographic Checksum** (`validateSecurityChecksum(str)`).
+5. **Cybernetics & Bio-Lab [Sector 5]** (East: `x: 2600-3400, y: 1100-1850`): **Terminal 5: Gene Sequence Splicer** (`spliceNucleotides(dna, target)`).
+6. **Quantum Hyper-Reactor Core [Sector 6]** (South: `x: 1340-2260, y: 1900-2550`): **Terminal 6: Plasma Pressure Convergence** (`convergePlasmaFrequency(base, target)`).
+7. **Central Assembly Atrium & Waiting Deck** (Center: `x: 1340-2260, y: 1040-1660`): Emergency Standup Beacon & Wardrobe Pod.
+8. **Tactical Corridor Network**: North, South, East, West, and auxiliary connecting corridors with directional chevron floor plating.
 
 ### 5. Dynamic Imposter Scaling Engine
 - Scales dynamically with player count:

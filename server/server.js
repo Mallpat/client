@@ -23,16 +23,16 @@ const io = new Server(server, {
 });
 
 // =============================================================================
-// 6 EXPANDED REAL-WORLD ENGINEERING DEBUGGING TERMINALS (2400 x 1800 MAP)
+// 6 EXPANDED REAL-WORLD ENGINEERING DEBUGGING TERMINALS (3600 x 2700 MAP)
 // =============================================================================
 function createInitialTerminals() {
   return [
     {
       id: 'terminal-1',
       name: 'Terminal 1 // Hyperspace Matrix Rotation',
-      roomName: 'Command Bridge (North)',
-      x: 1200,
-      y: 240,
+      roomName: 'Command Bridge (Sector 1 - North)',
+      x: 1800,
+      y: 400,
       solved: false,
       sabotaged: false,
       functionName: 'rotateMatrix90',
@@ -57,9 +57,9 @@ function createInitialTerminals() {
     {
       id: 'terminal-2',
       name: 'Terminal 2 // LRU Cache Eviction',
-      roomName: 'AI & Quantum Mainframe (North-West)',
-      x: 550,
-      y: 320,
+      roomName: 'AI & Quantum Mainframe (Sector 2 - North-West)',
+      x: 650,
+      y: 500,
       solved: false,
       sabotaged: false,
       functionName: 'evictStaleKeys',
@@ -84,9 +84,9 @@ function createInitialTerminals() {
     {
       id: 'terminal-3',
       name: 'Terminal 3 // Signal Packet Defragmenter',
-      roomName: 'Communications & Sensor Array (North-East)',
-      x: 1850,
-      y: 320,
+      roomName: 'Communications & Sensor Array (Sector 3 - North-East)',
+      x: 2950,
+      y: 500,
       solved: false,
       sabotaged: false,
       functionName: 'defragmentPackets',
@@ -111,9 +111,9 @@ function createInitialTerminals() {
     {
       id: 'terminal-4',
       name: 'Terminal 4 // Cryptographic Checksum Validator',
-      roomName: 'Security & Surveillance Vault (West)',
-      x: 380,
-      y: 950,
+      roomName: 'Security & Surveillance Vault (Sector 4 - West)',
+      x: 550,
+      y: 1450,
       solved: false,
       sabotaged: false,
       functionName: 'validateSecurityChecksum',
@@ -121,19 +121,19 @@ function createInitialTerminals() {
       starterCode: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
       code: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
       tests: [
-        { input: ['AB'], expected: false }, // 65 + 66 = 131 (odd -> false)
-        { input: ['AA'], expected: true },  // 65 + 65 = 130 (even -> true)
-        { input: ['SECURITY'], expected: true }, // 632 (even -> true)
-        { input: ['CYBER'], expected: false }, // 373 (odd -> false)
-        { input: ['VAULT'], expected: true }   // 396 (even -> true)
+        { input: ['AB'], expected: false },
+        { input: ['AA'], expected: true },
+        { input: ['SECURITY'], expected: true },
+        { input: ['CYBER'], expected: false },
+        { input: ['VAULT'], expected: true }
       ]
     },
     {
       id: 'terminal-5',
       name: 'Terminal 5 // Gene Sequence Splicer',
-      roomName: 'Cybernetics & Bio-Lab (East)',
-      x: 2000,
-      y: 950,
+      roomName: 'Cybernetics & Bio-Lab (Sector 5 - East)',
+      x: 3050,
+      y: 1450,
       solved: false,
       sabotaged: false,
       functionName: 'spliceNucleotides',
@@ -150,9 +150,9 @@ function createInitialTerminals() {
     {
       id: 'terminal-6',
       name: 'Terminal 6 // Plasma Pressure Balancer',
-      roomName: 'Quantum Hyper-Reactor Core (South)',
-      x: 1200,
-      y: 1550,
+      roomName: 'Quantum Hyper-Reactor Core (Sector 6 - South)',
+      x: 1800,
+      y: 2250,
       solved: false,
       sabotaged: false,
       functionName: 'convergePlasmaFrequency',
@@ -160,10 +160,10 @@ function createInitialTerminals() {
       starterCode: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
       code: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
       tests: [
-        { input: [1, 4], expected: 2 },  // 1 -> 2 -> 4 (2 steps)
-        { input: [2, 5], expected: 2 },  // 2 -> 4 -> 5 (2 steps)
+        { input: [1, 4], expected: 2 },
+        { input: [2, 5], expected: 2 },
         { input: [3, 3], expected: 0 },
-        { input: [1, 7], expected: 4 }   // 1 -> 2 -> 3 -> 6 -> 7 (4 steps)
+        { input: [1, 7], expected: 4 }
       ]
     }
   ];
@@ -553,8 +553,8 @@ io.on('connection', (socket) => {
         visorColor: visorColor || '#06b6d4',
         operativeTitle: operativeTitle || 'Systems Engineer',
         characterId: characterId || 'ironman',
-        x: 1120 + spawnOffset,
-        y: 880 + (spawnOffset % 60),
+        x: 1720 + (spawnOffset % 160),
+        y: 1320 + ((spawnOffset * 2) % 120),
         isMoving: false,
         facingLeft: false,
         role: 'DEV',
@@ -661,16 +661,16 @@ function launchGameMission(roomId) {
   const imposterCount = calculateImposterCount(room.players.length, room.imposterSetting);
   const shuffled = [...room.players].sort(() => 0.5 - Math.random());
 
-  // Distinct sector spawn positions across the Dreadnought map
+  // Distinct sector spawn positions across the 3600 x 2700 Dreadnought map
   const sectorSpawns = [
-    { x: 1200, y: 700 },  // Central Corridor
-    { x: 500, y: 400 },   // Quantum Mainframe
-    { x: 1900, y: 400 },  // Sensor Array
-    { x: 450, y: 1000 },  // Security Vault
-    { x: 1950, y: 1000 }, // Bio-Lab
-    { x: 1200, y: 1400 }, // Reactor Core
-    { x: 1000, y: 350 },  // Command Bridge
-    { x: 1400, y: 350 }   // Nav Deck
+    { x: 1800, y: 550 },   // Command Bridge
+    { x: 650, y: 650 },    // Quantum Mainframe
+    { x: 2950, y: 650 },   // Sensor Array
+    { x: 550, y: 1350 },   // Security Vault
+    { x: 3050, y: 1350 },  // Bio-Lab
+    { x: 1800, y: 2100 },  // Reactor Core
+    { x: 1800, y: 1200 },  // Central Atrium North
+    { x: 1800, y: 1550 }   // Central Atrium South
   ];
 
   room.players.forEach((p, index) => {
