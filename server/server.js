@@ -293,6 +293,7 @@ function broadcastRoomState(roomId) {
         color: p.color,
         visorColor: p.visorColor || '#06b6d4',
         operativeTitle: p.operativeTitle || 'Systems Engineer',
+        characterId: p.characterId || 'ironman',
         x: p.x,
         y: p.y,
         isMoving: p.isMoving,
@@ -313,6 +314,7 @@ function broadcastRoomState(roomId) {
       isHost: room.hostId === targetPlayer.id,
       phase: room.phase,
       timer: room.timer,
+      playerSpeed: room.playerSpeed || 2.4,
       myRole: room.phase === 'LOBBY' ? 'PENDING' : targetPlayer.role,
       fellowMafia,
       players: maskedPlayers,
@@ -484,6 +486,9 @@ function resolveVotingPhase(roomId) {
         ejected: true,
         username: ejectedPlayer.username,
         color: ejectedPlayer.color,
+        characterId: ejectedPlayer.characterId || 'ironman',
+        x: ejectedPlayer.x,
+        y: ejectedPlayer.y,
         wasMafia,
         message: `${ejectedPlayer.username} was ejected. They were ${wasMafia ? 'an INFILTRATOR (MAFIA)!' : 'an innocent CREW DEVELOPER!'}`
       };
@@ -493,10 +498,10 @@ function resolveVotingPhase(roomId) {
   broadcastRoomState(roomId);
 
   if (!checkWinConditions(roomId)) {
-    // Return to DAY phase
+    // Return to DAY phase after dramatic elimination cutscene
     setTimeout(() => {
       startPhaseTimer(roomId, 'DAY', 90);
-    }, 4000);
+    }, 5000);
   }
 }
 
@@ -507,7 +512,7 @@ io.on('connection', (socket) => {
   console.log(`[Socket Connected] ID: ${socket.id}`);
 
   // 1. Join Room & Spawn in Central Assembly Bay (Lobby)
-  socket.on('join_room', ({ roomId, username, color, visorColor, operativeTitle }) => {
+  socket.on('join_room', ({ roomId, username, color, visorColor, operativeTitle, characterId }) => {
     if (!roomId || !roomId.trim()) return;
     const cleanRoom = roomId.trim();
     const cleanName = (username && username.trim()) || `Operative_${socket.id.substring(0, 4)}`;
@@ -522,6 +527,7 @@ io.on('connection', (socket) => {
         timer: 90,
         timerInterval: null,
         imposterSetting: 'auto',
+        playerSpeed: 2.4,
         players: [],
         terminals: createInitialTerminals(),
         chatMessages: [],
@@ -546,6 +552,7 @@ io.on('connection', (socket) => {
         color: selectedColor,
         visorColor: visorColor || '#06b6d4',
         operativeTitle: operativeTitle || 'Systems Engineer',
+        characterId: characterId || 'ironman',
         x: 1120 + spawnOffset,
         y: 880 + (spawnOffset % 60),
         isMoving: false,
@@ -560,13 +567,14 @@ io.on('connection', (socket) => {
       player.color = selectedColor;
       if (visorColor) player.visorColor = visorColor;
       if (operativeTitle) player.operativeTitle = operativeTitle;
+      if (characterId) player.characterId = characterId;
     }
 
     broadcastRoomState(cleanRoom);
   });
 
   // 2. Real-Time Wardrobe / Appearance Customization (Live in Lobby or Game)
-  socket.on('update_appearance', ({ roomId, color, visorColor, operativeTitle }) => {
+  socket.on('update_appearance', ({ roomId, color, visorColor, operativeTitle, characterId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
 
@@ -576,16 +584,27 @@ io.on('connection', (socket) => {
     if (color) player.color = color;
     if (visorColor) player.visorColor = visorColor;
     if (operativeTitle) player.operativeTitle = operativeTitle;
+    if (characterId) player.characterId = characterId;
 
     broadcastRoomState(roomId);
   });
 
-  // 3. Host Updates Game Settings (Imposter Count, etc.)
-  socket.on('set_game_settings', ({ roomId, imposterSetting }) => {
+  // 3. Host Updates Game Settings (Imposter Count, Player Speed, etc.)
+  socket.on('set_game_settings', ({ roomId, imposterSetting, playerSpeed }) => {
     const room = rooms.get(roomId);
-    if (!room || room.hostId !== socket.id || room.phase !== 'LOBBY') return;
+    if (!room || room.hostId !== socket.id) return;
 
-    room.imposterSetting = imposterSetting || 'auto';
+    if (imposterSetting && room.phase === 'LOBBY') {
+      room.imposterSetting = imposterSetting;
+    }
+
+    if (playerSpeed !== undefined && playerSpeed !== null) {
+      const num = parseFloat(playerSpeed);
+      if (!isNaN(num) && num >= 1.0 && num <= 6.0) {
+        room.playerSpeed = Math.round(num * 10) / 10;
+      }
+    }
+
     broadcastRoomState(roomId);
   });
 

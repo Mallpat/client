@@ -35,6 +35,7 @@ import {
   Sliders,
   Maximize2
 } from 'lucide-react';
+import { AVENGERS_HEROES, getHero, drawAvenger, drawFallenRelic, drawThanosSnap } from './avengers';
 
 const getInitialServerUrl = () => {
   if (typeof window !== 'undefined') {
@@ -55,54 +56,154 @@ const socket = io(SERVER_URL || 'http://localhost:5000', {
   reconnectionDelay: 1000
 });
 
-// =============================================================================
-// 10 CYBER EXO-SUIT COLORWAYS & TACTICAL GEAR
-// =============================================================================
-const PLAYER_COLORS = [
-  { name: 'Crimson Vanguard', hex: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' },
-  { name: 'Cobalt Striker', hex: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  { name: 'Emerald Matrix', hex: '#10b981', glow: 'rgba(16, 185, 129, 0.4)' },
-  { name: 'Solar Pulse', hex: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' },
-  { name: 'Hyper Orange', hex: '#f97316', glow: 'rgba(249, 115, 22, 0.4)' },
-  { name: 'Void Nebula', hex: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.4)' },
-  { name: 'Neon Flamingo', hex: '#ec4899', glow: 'rgba(236, 72, 153, 0.4)' },
-  { name: 'Quantum Cyan', hex: '#06b6d4', glow: 'rgba(6, 182, 212, 0.4)' },
-  { name: 'Arctic Frost', hex: '#e2e8f0', glow: 'rgba(226, 232, 240, 0.4)' },
-  { name: 'Stealth Obsidian', hex: '#475569', glow: 'rgba(71, 85, 105, 0.4)' }
-];
+// Backward-compatible fallback colorways
+const PLAYER_COLORS = AVENGERS_HEROES.map((h) => ({
+  name: h.name,
+  hex: h.primaryColor,
+  glow: h.glowColor
+}));
 
-const VISOR_COLORS = [
-  { name: 'Cyber Cyan', hex: '#06b6d4' },
-  { name: 'Laser Gold', hex: '#f59e0b' },
-  { name: 'Toxic Lime', hex: '#10b981' },
-  { name: 'Plasma Red', hex: '#ef4444' },
-  { name: 'Ultraviolet', hex: '#a855f7' }
-];
+const VISOR_COLORS = AVENGERS_HEROES.map((h) => ({
+  name: h.name + ' Glow',
+  hex: h.visorColor
+}));
 
 const OPERATIVE_TITLES = [
-  'Lead Architect',
-  'Quantum Engineer',
-  'Security Specialist',
-  'Systems Hacker',
-  'Chief Navigator',
-  'Bio-Technician',
-  'Cyber Infiltrator'
+  'Armored Avenger',
+  'First Avenger',
+  'God of Thunder',
+  'Gamma Juggernaut',
+  'Master Assassin',
+  'Web-Slinger',
+  'Sorcerer Supreme',
+  'King of Wakanda',
+  'Master Marksman'
 ];
 
 const RANDOM_NAMES = [
-  'Vanguard_One',
-  'Aether_Prime',
-  'Ghost_Zero',
-  'Spectre_9',
-  'Nova_Pulse',
-  'Cipher_X',
-  'Apex_Runner',
-  'Titan_Core'
+  'Tony_Stark',
+  'Steve_Rogers',
+  'Thor_Odinson',
+  'Bruce_Banner',
+  'Nat_Romanoff',
+  'Peter_Parker',
+  'Stephen_Strange',
+  'King_TChalla',
+  'Clint_Barton',
+  'Avenger_Prime'
 ];
 
 // Map Dimensions (Dreadnought Megastructure)
 const MAP_WIDTH = 2400;
 const MAP_HEIGHT = 1800;
+
+function EliminationCinematicModal({ cutscene, onClose }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    let animId;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = 600;
+    canvas.height = 360;
+
+    const DURATION = 4800; // ms
+    const startTime = cutscene.startTime || Date.now();
+
+    const renderFrame = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, Math.max(0, elapsed / DURATION));
+      const time = elapsed / 1000;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawThanosSnap(ctx, cutscene.characterId || 'ironman', progress, time, canvas.width, canvas.height);
+
+      if (progress < 1) {
+        animId = requestAnimationFrame(renderFrame);
+      } else {
+        setTimeout(onClose, 300);
+      }
+    };
+
+    renderFrame();
+    return () => cancelAnimationFrame(animId);
+  }, [cutscene, onClose]);
+
+  const heroObj = getHero(cutscene.characterId || 'ironman');
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundColor: 'rgba(5, 7, 13, 0.94)',
+        backdropFilter: 'blur(20px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 150
+      }}
+    >
+      <div
+        style={{
+          width: '640px',
+          backgroundColor: '#090d16',
+          border: cutscene.wasMafia ? '2px solid #ef4444' : '2px solid #38bdf8',
+          borderRadius: '16px',
+          padding: '24px',
+          textAlign: 'center',
+          boxShadow: cutscene.wasMafia
+            ? '0 0 60px rgba(239, 68, 68, 0.4), 0 25px 50px rgba(0,0,0,0.9)'
+            : '0 0 60px rgba(56, 189, 248, 0.4), 0 25px 50px rgba(0,0,0,0.9)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+          <span style={{ fontSize: '18px' }}>⚡</span>
+          <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '2px', color: '#f59e0b' }}>
+            THANOS SNAP INITIATED // EJECTION CUTSCENE
+          </span>
+          <span style={{ fontSize: '18px' }}>⚡</span>
+        </div>
+
+        <canvas
+          ref={canvasRef}
+          style={{
+            width: '600px',
+            height: '360px',
+            borderRadius: '10px',
+            backgroundColor: '#030712',
+            border: '1px solid #1e293b',
+            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)'
+          }}
+        />
+
+        <div style={{ marginTop: '16px', width: '100%' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: heroObj.primaryColor, margin: '0 0 8px 0' }}>
+            {cutscene.username} ({heroObj.name})
+          </h2>
+          <div
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              backgroundColor: cutscene.wasMafia ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.15)',
+              border: cutscene.wasMafia ? '1px solid #ef4444' : '1px solid #38bdf8',
+              color: cutscene.wasMafia ? '#fca5a5' : '#7dd3fc',
+              fontSize: '13px',
+              fontWeight: 800,
+              display: 'inline-block'
+            }}
+          >
+            {cutscene.message || (cutscene.wasMafia ? 'An Infiltrator was vanished!' : 'An Innocent Hero was dissolved.')}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   // Connection & Room state
@@ -112,9 +213,25 @@ export default function App() {
   const [username, setUsername] = useState(() => {
     return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
   });
-  const [selectedColor, setSelectedColor] = useState(PLAYER_COLORS[0].hex);
-  const [selectedVisor, setSelectedVisor] = useState(VISOR_COLORS[0].hex);
-  const [selectedTitle, setSelectedTitle] = useState(OPERATIVE_TITLES[0]);
+
+  // Avengers Hero Character State
+  const [selectedHero, setSelectedHero] = useState(() => {
+    return localStorage.getItem('code_mafia_hero') || 'ironman';
+  });
+  const selectedHeroObj = useMemo(() => getHero(selectedHero), [selectedHero]);
+
+  const [selectedColor, setSelectedColor] = useState(selectedHeroObj.primaryColor);
+  const [selectedVisor, setSelectedVisor] = useState(selectedHeroObj.visorColor);
+  const [selectedTitle, setSelectedTitle] = useState(selectedHeroObj.roleTitle);
+
+  // Movement Speed (Synced from Admin/Server, balanced default 2.4)
+  const [playerSpeed, setPlayerSpeed] = useState(2.4);
+  const playerSpeedRef = useRef(2.4);
+  const [showAdminSpeedModal, setShowAdminSpeedModal] = useState(false);
+
+  // Elimination Dramatic Cutscene State
+  const [eliminationCutscene, setEliminationCutscene] = useState(null);
+
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(SERVER_URL || '');
   const [showWardrobe, setShowWardrobe] = useState(false);
@@ -159,10 +276,14 @@ export default function App() {
   const lastMoveEmitTime = useRef(0);
   const particlesRef = useRef([]);
 
-  // Sync players ref for canvas loop
+  // Sync players ref and playerSpeed ref for canvas loop
   useEffect(() => {
     playersRef.current = players;
   }, [players]);
+
+  useEffect(() => {
+    playerSpeedRef.current = playerSpeed;
+  }, [playerSpeed]);
 
   // Socket event listeners
   useEffect(() => {
@@ -194,6 +315,21 @@ export default function App() {
       setGameWinner(data.gameWinner);
       setWinReason(data.winReason);
       setEmergencyCaller(data.emergencyCaller);
+
+      if (data.playerSpeed) {
+        setPlayerSpeed(data.playerSpeed);
+        playerSpeedRef.current = data.playerSpeed;
+      }
+
+      if (data.lastEjection && data.lastEjection.ejected) {
+        setEliminationCutscene({
+          username: data.lastEjection.username,
+          characterId: data.lastEjection.characterId || 'ironman',
+          wasMafia: data.lastEjection.wasMafia,
+          message: data.lastEjection.message,
+          startTime: Date.now()
+        });
+      }
 
       // Sync local player position if uninitialized
       const self = data.players.find((p) => p.id === socket.id);
@@ -315,8 +451,8 @@ export default function App() {
     canvas.width = 960;
     canvas.height = 640;
 
-    // Movement physics & collision boundaries
-    const SPEED = 4.2;
+    // Movement physics & collision boundaries (Balanced default 2.4, controlled by Admin)
+    const SPEED = playerSpeedRef.current || 2.4;
 
     const render = () => {
       // 1. Movement Calculations
@@ -746,17 +882,21 @@ export default function App() {
       });
 
       // =======================================================================
-      // DRAW ORIGINAL CYBERNETIC OPERATIVES (Zero "Among Us" assets)
+      // DRAW AVENGERS HEROES & FALLEN HERO MEMORIAL RELICS
       // =======================================================================
       // Combine remote players and local player
       const allRoster = [...playersRef.current];
-      if (!allRoster.some((p) => p.id === socket.id)) {
+      const selfPlayer = allRoster.find((p) => p.id === socket.id);
+
+      if (!selfPlayer) {
+        const heroObj = getHero(selectedHero);
         allRoster.push({
           id: socket.id,
           username,
-          color: selectedColor,
-          visorColor: selectedVisor,
-          operativeTitle: selectedTitle,
+          characterId: selectedHero,
+          color: heroObj.primaryColor,
+          visorColor: heroObj.visorColor,
+          operativeTitle: selectedTitle || heroObj.roleTitle,
           x: localPos.x,
           y: localPos.y,
           isMoving,
@@ -766,7 +906,14 @@ export default function App() {
         });
       }
 
-      // Sort by Y for depth layering
+      // 1. Draw Fallen Hero Relics on the deck floor for any eliminated/dead players
+      allRoster.forEach((p) => {
+        if (!p.isAlive) {
+          drawFallenRelic(ctx, p.characterId || 'ironman', p.x, p.y, time);
+        }
+      });
+
+      // 2. Sort alive and ghost operatives by Y for depth layering
       allRoster.sort((a, b) => a.y - b.y);
 
       allRoster.forEach((p) => {
@@ -775,102 +922,29 @@ export default function App() {
         const py = isLocal ? localPos.y : p.y;
         const isFacingLeft = isLocal ? facingLeftRef.current : p.facingLeft;
         const isPlMoving = isLocal ? isMoving : p.isMoving;
-        const pVisor = p.visorColor || '#06b6d4';
-        const pColor = p.color || '#3b82f6';
+        const isGhost = !p.isAlive;
         const pWalk = isPlMoving ? Math.sin(time * 12) * 4 : 0;
+        const heroObj = getHero(p.characterId || 'ironman');
 
         ctx.save();
         ctx.translate(px, py);
-        if (isFacingLeft) ctx.scale(-1, 1);
 
-        // Shadow
-        ctx.beginPath();
-        ctx.ellipse(0, 20, 18, 7, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.fill();
-
-        // 1. Rear Jetpack Module & Thruster Particles
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-18, -12, 8, 24);
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(-18, -12, 8, 24);
-
-        if (isPlMoving) {
-          // Thruster flame exhaust
-          ctx.fillStyle = 'rgba(56, 189, 248, 0.8)';
-          ctx.beginPath();
-          ctx.moveTo(-18, 12);
-          ctx.lineTo(-24 - Math.random() * 6, 16 + Math.random() * 4);
-          ctx.lineTo(-14, 12);
-          ctx.fill();
-        }
-
-        // 2. Mechanical Armored Legs
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(-8 + pWalk, 8, 7, 14); // Left leg
-        ctx.fillRect(2 - pWalk, 8, 7, 14);  // Right leg
-        ctx.fillStyle = pColor;
-        ctx.fillRect(-9 + pWalk, 18, 9, 5); // Left boot armor
-        ctx.fillRect(1 - pWalk, 18, 9, 5);  // Right boot armor
-
-        // 3. Segmented Ballistic Chestplate (Trapezoidal Exo-Suit)
-        ctx.fillStyle = pColor;
-        ctx.beginPath();
-        ctx.moveTo(-14, -14);
-        ctx.lineTo(14, -14);
-        ctx.lineTo(11, 10);
-        ctx.lineTo(-11, 10);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        // Center Power Core Reactor
-        ctx.fillStyle = pVisor;
-        ctx.beginPath();
-        ctx.arc(0, -2, 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Armored Shoulder Pauldrons
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-17, -14, 6, 10);
-        ctx.fillRect(11, -14, 6, 10);
-
-        // 4. Tactical Combat Helmet & Curved AR Hex-Visor
-        ctx.fillStyle = '#0f172a';
-        ctx.beginPath();
-        ctx.arc(0, -24, 13, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = pColor;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Glowing AR Curved Visor
-        ctx.fillStyle = pVisor;
-        ctx.shadowColor = pVisor;
-        ctx.shadowBlur = 8;
-        ctx.beginPath();
-        ctx.arc(4, -24, 9, -Math.PI / 3, Math.PI / 3);
-        ctx.lineTo(4, -20);
-        ctx.closePath();
-        ctx.fill();
-        ctx.shadowBlur = 0; // Reset blur
+        // Procedural vector render for this specific Avenger (Iron Man, Cap, Thor, Hulk, etc.)
+        drawAvenger(ctx, p.characterId || 'ironman', pWalk, time, isPlMoving, isFacingLeft, isGhost, isLocal);
 
         ctx.restore();
 
-        // Nametag & Class Title (Drawn without scale inversion)
+        // Nametag & Hero Specialization Title (Drawn without scale inversion)
         ctx.font = "bold 10px 'JetBrains Mono', monospace";
         ctx.textAlign = 'center';
 
         const isMafiaTeammate = myRole === 'MAFIA' && (p.role === 'MAFIA' || fellowMafia.includes(p.username));
-        ctx.fillStyle = isMafiaTeammate ? '#ef4444' : '#f8fafc';
-        ctx.fillText(p.username + (isLocal ? ' (YOU)' : ''), px, py - 42);
+        ctx.fillStyle = isGhost ? 'rgba(148, 163, 184, 0.7)' : (isMafiaTeammate ? '#ef4444' : '#f8fafc');
+        ctx.fillText((isGhost ? '👻 ' : '') + p.username + (isLocal ? ' (YOU)' : ''), px, py - (isGhost ? 52 : 44));
 
         ctx.font = "8px 'JetBrains Mono', monospace";
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText(`[${p.operativeTitle || 'Operative'}]`, px, py - 32);
+        ctx.fillStyle = isGhost ? 'rgba(56, 189, 248, 0.6)' : heroObj.primaryColor;
+        ctx.fillText(`[${heroObj.name} • ${p.operativeTitle || heroObj.roleTitle}]`, px, py - (isGhost ? 42 : 34));
       });
 
       // =======================================================================
@@ -960,7 +1034,7 @@ export default function App() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [localPos, terminals, myRole, phase, roomId, username, selectedColor, selectedVisor, selectedTitle]);
+  }, [localPos, terminals, myRole, phase, roomId, username, selectedColor, selectedVisor, selectedTitle, selectedHero, playerSpeed]);
 
   // =========================================================================
   // VIEW: AIRLOCK LOGIN (Entry / Server Config)
@@ -1044,12 +1118,14 @@ export default function App() {
                 alert("⚠️ Cannot Board: Game Server Offline!\n\nYour game frontend is running on Vercel, but it cannot connect to the backend WebSocket server.\n\n👉 Deploy your backend to Render.com and paste your Render URL into 'Server URL' below!");
                 return;
               }
+              const heroObj = getHero(selectedHero);
               socket.emit('join_room', {
                 roomId: roomId.trim(),
                 username: username.trim(),
-                color: selectedColor,
-                visorColor: selectedVisor,
-                operativeTitle: selectedTitle
+                color: heroObj.primaryColor,
+                visorColor: heroObj.visorColor,
+                operativeTitle: selectedTitle || heroObj.roleTitle,
+                characterId: selectedHero
               });
               setInRoom(true);
             }}
@@ -1131,29 +1207,57 @@ export default function App() {
               />
             </div>
 
-            {/* Suit Color Picker */}
+            {/* Select Avengers Hero */}
             <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px' }}>
-                EXO-SUIT COLORWAY
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                {PLAYER_COLORS.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    onClick={() => setSelectedColor(c.hex)}
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      borderRadius: '6px',
-                      backgroundColor: c.hex,
-                      border: selectedColor === c.hex ? '3px solid #ffffff' : '2px solid #000000',
-                      boxShadow: selectedColor === c.hex ? `0 0 12px ${c.hex}` : 'none',
-                      cursor: 'pointer'
-                    }}
-                    title={c.name}
-                  />
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+                  CHOOSE YOUR AVENGERS HERO
+                </label>
+                <span style={{ fontSize: '10px', color: selectedHeroObj.primaryColor, fontWeight: 700 }}>
+                  {selectedHeroObj.name} ({selectedHeroObj.alias})
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                {AVENGERS_HEROES.map((h) => {
+                  const isSel = selectedHero === h.id;
+                  return (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHero(h.id);
+                        setSelectedColor(h.primaryColor);
+                        setSelectedVisor(h.visorColor);
+                        setSelectedTitle(h.roleTitle);
+                        localStorage.setItem('code_mafia_hero', h.id);
+                      }}
+                      style={{
+                        padding: '8px 6px',
+                        borderRadius: '8px',
+                        backgroundColor: isSel ? 'rgba(30, 41, 59, 0.95)' : '#090d16',
+                        border: isSel ? `2px solid ${h.primaryColor}` : '1px solid #1e293b',
+                        boxShadow: isSel ? `0 0 12px ${h.glowColor}` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '3px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>{h.iconEmoji}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: isSel ? '#ffffff' : '#cbd5e1' }}>
+                        {h.name}
+                      </span>
+                      <span style={{ fontSize: '9px', color: h.primaryColor, fontWeight: 600 }}>
+                        {h.alias}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: '6px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>
+                "{selectedHeroObj.quote}"
               </div>
             </div>
 
@@ -1318,8 +1422,106 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right Controls: Wardrobe & Mini-map Toggles */}
+        {/* Right Controls: Speed, Wardrobe & Mini-map Toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Admin / Host Speed Controls */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => isHost && setShowAdminSpeedModal(!showAdminSpeedModal)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isHost ? '#0f172a' : '#090d16',
+                border: isHost ? '1px solid #38bdf8' : '1px solid #334155',
+                borderRadius: '6px',
+                color: isHost ? '#38bdf8' : '#94a3b8',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: isHost ? 'pointer' : 'default',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title={isHost ? 'Admin Speed Control (Click to Adjust)' : 'Operative Movement Speed'}
+            >
+              <Zap size={13} color="#f59e0b" />
+              <span>SPEED: {playerSpeed}x</span>
+              {isHost && <Sliders size={12} />}
+            </button>
+
+            {isHost && showAdminSpeedModal && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '115%',
+                  right: 0,
+                  width: '240px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.98)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(56, 189, 248, 0.25)',
+                  zIndex: 50
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#38bdf8' }}>HOST SPEED CONTROL</span>
+                  <button
+                    onClick={() => setShowAdminSpeedModal(false)}
+                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#cbd5e1', marginBottom: '6px' }}>
+                  <span>Speed:</span>
+                  <span style={{ fontWeight: 800, color: '#f59e0b' }}>{playerSpeed}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="1.5"
+                  max="4.5"
+                  step="0.1"
+                  value={playerSpeed}
+                  onChange={(e) => {
+                    const spd = parseFloat(e.target.value);
+                    setPlayerSpeed(spd);
+                    socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: spd });
+                  }}
+                  style={{ width: '100%', marginBottom: '10px', accentColor: '#38bdf8' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                  {[
+                    { label: '1.8x', val: 1.8 },
+                    { label: '2.4x', val: 2.4 },
+                    { label: '3.2x', val: 3.2 },
+                    { label: '4.0x', val: 4.0 }
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      onClick={() => {
+                        setPlayerSpeed(p.val);
+                        socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: p.val });
+                      }}
+                      style={{
+                        padding: '4px 0',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        backgroundColor: playerSpeed === p.val ? '#0284c7' : '#1e293b',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: '#fff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setShowWardrobe(true)}
             style={{
@@ -1522,7 +1724,7 @@ export default function App() {
             </div>
 
             {/* Imposter Scaling Info & Setting */}
-            <div style={{ padding: '8px 10px', backgroundColor: '#090d16', borderRadius: '6px', border: '1px solid #1e293b', marginBottom: '12px', fontSize: '11px' }}>
+            <div style={{ padding: '8px 10px', backgroundColor: '#090d16', borderRadius: '6px', border: '1px solid #1e293b', marginBottom: '8px', fontSize: '11px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '4px' }}>
                 <span>Imposter Scaling:</span>
                 <span style={{ color: '#ef4444', fontWeight: 700 }}>{calculatedImposters} Infiltrator(s)</span>
@@ -1532,7 +1734,7 @@ export default function App() {
                   <label style={{ fontSize: '10px', color: '#64748b' }}>Imposter Mode:</label>
                   <select
                     value={imposterSetting}
-                    onChange={(e) => socket.emit('set_game_settings', { roomId, imposterSetting: e.target.value })}
+                    onChange={(e) => socket.emit('set_game_settings', { roomId, imposterSetting: e.target.value, playerSpeed })}
                     style={{ flex: 1, padding: '4px 6px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '10px' }}
                   >
                     <option value="auto">Auto (Dynamic Scale)</option>
@@ -1540,6 +1742,64 @@ export default function App() {
                     <option value="2">2 Infiltrators</option>
                     <option value="3">3 Infiltrators</option>
                   </select>
+                </div>
+              )}
+            </div>
+
+            {/* Movement Speed Info & Host Calibration */}
+            <div style={{ padding: '8px 10px', backgroundColor: '#090d16', borderRadius: '6px', border: '1px solid #1e293b', marginBottom: '12px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '4px' }}>
+                <span>Movement Speed:</span>
+                <span style={{ color: '#38bdf8', fontWeight: 700 }}>{playerSpeed}x {playerSpeed === 2.4 ? '(Balanced)' : ''}</span>
+              </div>
+              {isHost ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                  <input
+                    type="range"
+                    min="1.5"
+                    max="4.5"
+                    step="0.1"
+                    value={playerSpeed}
+                    onChange={(e) => {
+                      const spd = parseFloat(e.target.value);
+                      setPlayerSpeed(spd);
+                      socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: spd });
+                    }}
+                    style={{ width: '100%', accentColor: '#38bdf8' }}
+                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                    {[
+                      { label: 'Stealth 1.8x', val: 1.8 },
+                      { label: 'Normal 2.4x', val: 2.4 },
+                      { label: 'Combat 3.2x', val: 3.2 },
+                      { label: 'Super 4.0x', val: 4.0 }
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => {
+                          setPlayerSpeed(p.val);
+                          socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: p.val });
+                        }}
+                        style={{
+                          padding: '3px 0',
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          backgroundColor: playerSpeed === p.val ? '#0284c7' : '#1e293b',
+                          border: playerSpeed === p.val ? '1px solid #38bdf8' : '1px solid #334155',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                  Speed managed by Host.
                 </div>
               )}
             </div>
@@ -1702,73 +1962,80 @@ export default function App() {
               </button>
             </div>
 
-            {/* Suit Colors */}
+            {/* Avengers Hero Selection */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '8px' }}>
-                EXO-SUIT ARMOR COLORWAY
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                {PLAYER_COLORS.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    onClick={() => {
-                      setSelectedColor(c.hex);
-                      socket.emit('update_appearance', { roomId, color: c.hex, visorColor: selectedVisor, operativeTitle: selectedTitle });
-                    }}
-                    style={{
-                      height: '32px',
-                      borderRadius: '6px',
-                      backgroundColor: c.hex,
-                      border: selectedColor === c.hex ? '3px solid #ffffff' : '2px solid #000000',
-                      boxShadow: selectedColor === c.hex ? `0 0 12px ${c.hex}` : 'none',
-                      cursor: 'pointer'
-                    }}
-                    title={c.name}
-                  />
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+                  CHOOSE AVENGERS HERO
+                </label>
+                <span style={{ fontSize: '11px', color: selectedHeroObj.primaryColor, fontWeight: 800 }}>
+                  {selectedHeroObj.name} ({selectedHeroObj.alias})
+                </span>
               </div>
-            </div>
-
-            {/* Visor Glow */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '8px' }}>
-                TACTICAL AR VISOR GLOW
-              </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {VISOR_COLORS.map((v) => (
-                  <button
-                    key={v.hex}
-                    type="button"
-                    onClick={() => {
-                      setSelectedVisor(v.hex);
-                      socket.emit('update_appearance', { roomId, color: selectedColor, visorColor: v.hex, operativeTitle: selectedTitle });
-                    }}
-                    style={{
-                      flex: 1,
-                      height: '28px',
-                      borderRadius: '6px',
-                      backgroundColor: v.hex,
-                      border: selectedVisor === v.hex ? '3px solid #ffffff' : '2px solid #000000',
-                      boxShadow: selectedVisor === v.hex ? `0 0 10px ${v.hex}` : 'none',
-                      cursor: 'pointer'
-                    }}
-                    title={v.name}
-                  />
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '210px', overflowY: 'auto', paddingRight: '4px' }}>
+                {AVENGERS_HEROES.map((h) => {
+                  const isSel = selectedHero === h.id;
+                  return (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHero(h.id);
+                        setSelectedColor(h.primaryColor);
+                        setSelectedVisor(h.visorColor);
+                        setSelectedTitle(h.roleTitle);
+                        localStorage.setItem('code_mafia_hero', h.id);
+                        socket.emit('update_appearance', {
+                          roomId,
+                          color: h.primaryColor,
+                          visorColor: h.visorColor,
+                          operativeTitle: h.roleTitle,
+                          characterId: h.id
+                        });
+                      }}
+                      style={{
+                        padding: '8px 6px',
+                        borderRadius: '8px',
+                        backgroundColor: isSel ? 'rgba(30, 41, 59, 0.95)' : '#090d16',
+                        border: isSel ? `2px solid ${h.primaryColor}` : '1px solid #1e293b',
+                        boxShadow: isSel ? `0 0 12px ${h.glowColor}` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '3px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>{h.iconEmoji}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: isSel ? '#ffffff' : '#cbd5e1' }}>
+                        {h.name}
+                      </span>
+                      <span style={{ fontSize: '9px', color: h.primaryColor, fontWeight: 600 }}>
+                        {h.alias}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Operative Title */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '8px' }}>
-                OPERATIVE SPECIALIZATION CLASS
+                HERO SPECIALIZATION TITLE
               </label>
               <select
                 value={selectedTitle}
                 onChange={(e) => {
                   setSelectedTitle(e.target.value);
-                  socket.emit('update_appearance', { roomId, color: selectedColor, visorColor: selectedVisor, operativeTitle: e.target.value });
+                  socket.emit('update_appearance', {
+                    roomId,
+                    color: selectedHeroObj.primaryColor,
+                    visorColor: selectedHeroObj.visorColor,
+                    operativeTitle: e.target.value,
+                    characterId: selectedHero
+                  });
                 }}
                 style={{ width: '100%', padding: '8px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '12px' }}
               >
@@ -2176,6 +2443,16 @@ export default function App() {
             )}
           </div>
         </div>
+      )}
+
+      {/* =====================================================================
+          THANOS SNAP CINEMATIC ELIMINATION MODAL
+          ===================================================================== */}
+      {eliminationCutscene && (
+        <EliminationCinematicModal
+          cutscene={eliminationCutscene}
+          onClose={() => setEliminationCutscene(null)}
+        />
       )}
     </div>
   );

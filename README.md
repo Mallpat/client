@@ -6,17 +6,35 @@ A 2D top-down cyberpunk social deduction & engineering arena built with **React 
 
 ## 🌟 What's New in the Hackathon Dreadnought Edition
 
-### 1. Original Cybernetic Operatives & Sci-Fi Props (Zero "Among Us" Assets)
-- **Articulated Cybernetic Operatives**: Segmented ballistic chestplate, armored shoulder pauldrons, glowing AR curved hex-visors, rear jetpack thrusters with animated particle trail exhausts, and mechanical walking strides.
-- **Original High-Graphic Procedural Props**:
-  - **Quantum Hyper-Reactor Core**: Counter-rotating magnetic stabilization rings and swirling plasma vortex.
-  - **Holographic 3D Star-Chart Projector**: Rotating wireframe celestial globe with orbiting orbital rings and digital telemetry glyphs.
-  - **Cryogenic Stasis Chambers**: Glass cylinders with bioluminescent cyan fluid, rising air bubbles, and floating 3D DNA double-helix projections.
-  - **AI & Supercomputer Databanks**: Monolithic server racks with animated LED data-bus lights and spinning circular ventilation fans.
-  - **Tactical Radar & Surveillance Wall**: Multi-screen curved command terminal with rotating radar sweep.
-  - **Interactive Decontamination & Wardrobe Pod**: Biometric chamber with sweeping vertical laser scan beam.
+### 1. Avengers Heroes Roster (Replacing Generic Suits)
+- **9 Iconic Avengers Characters**:
+  1. **Iron Man (Tony Stark)**: Arc Reactor chest piece, gold-titanium armor, **boot jet thruster flames & hovering bob**.
+  2. **Captain America (Steve Rogers)**: Vibranium star shield with gleam, tactical harness, **military sprint & shield tilt**.
+  3. **Thor (God of Thunder)**: Mjolnir war hammer, flowing red cape, **cape physics ripple & electric lightning sparks**.
+  4. **Hulk (Bruce Banner)**: Heavy gamma musculature (1.22x scale), **ground-shaking stomping gait & dust shockwaves**.
+  5. **Black Widow (Natasha Romanoff)**: Tactical stealth suit, crimson braid, **low-profile sprint & Widow's Bite taser sparks**.
+  6. **Spider-Man (Peter Parker)**: Web-patterned suit, large expressive triangular eyes, **springy crouch-jog**.
+  7. **Doctor Strange (Stephen Strange)**: Cloak of Levitation, Eye of Agamotto, **floating levitation & rotating Eldritch Tao Mandalas**.
+  8. **Black Panther (King T'Challa)**: Vibranium weave suit with claw necklace, **sleek feline prowl & purple kinetic energy pulses**.
+  9. **Hawkeye (Clint Barton)**: Tactical archery gear, recurve bow, **archer jog & quiver with arrows**.
 
-### 2. Massive 2400 × 1800 Dreadnought Megastructure (8 Themed Sectors)
+### 2. Calibrated Prop Speed & Host/Admin Control
+- **Balanced Default Speed**: Reduced fixed velocity from `4.2` to a comfortable, tactical `2.4`.
+- **Live Admin Speed Control**:
+  - Room Host can adjust speed in the Lobby Waiting Deck or live during gameplay via the top bar `⚡ SPEED: [2.4x] ⚙️` controller.
+  - Quick-preset buttons: **Stealth (1.8x)**, **Normal (2.4x)**, **Combat (3.2x)**, **Super (4.0x)**.
+  - Instantly synced across all players via WebSocket `room_update`.
+
+### 3. Dramatic Elimination Animations & Fallen Hero Relics
+- **Thanos Snap Dissolution Cutscene**:
+  - When an operative is voted out during Standup Debate, a full-screen cinematic modal activates.
+  - The eliminated Avenger's body progressively turns into 180+ glowing cosmic ash particles drifting away.
+  - Role reveal debrief confirms whether an Infiltrator was banished or an Innocent Avenger fell.
+- **On-Canvas Fallen Hero Relics**:
+  - Defeated players leave behind iconic memorial remnants on the ship floor (Cap's shield embedded in the deck, Thor's Mjolnir sparking, Iron Man's glowing Arc Reactor, Hulk's gamma crater, Spidey's mask, Doctor Strange's Eye of Agamotto, etc.).
+  - Eliminated players transition into ethereal translucent ghost mode (`👻`) to observe or solve remaining terminals!
+
+### 4. Massive 2400 × 1800 Dreadnought Megastructure (8 Themed Sectors)
 1. **Command Bridge [Sector 1]** (North: `x: 850-1550, y: 100-550`): **Terminal 1: Hyperspace Matrix Rotation** (`rotateMatrix90(matrix)`).
 2. **AI & Quantum Mainframe [Sector 2]** (North-West: `x: 200-750, y: 150-600`): **Terminal 2: LRU Cache Eviction** (`evictStaleKeys(cache, maxAge)`).
 3. **Communications & Sensor Array [Sector 3]** (North-East: `x: 1650-2200, y: 150-600`): **Terminal 3: Signal Packet Defragmenter** (`defragmentPackets(packets)`).
@@ -26,22 +44,19 @@ A 2D top-down cyberpunk social deduction & engineering arena built with **React 
 7. **Central Assembly Atrium** (Center: `x: 850-1550, y: 650-1150`): Central Lockdown Beacon & Wardrobe Pod.
 8. **Power Grid Substation & Armory** (South-West / South-East): Tesla coils and auxiliary capacitors.
 
-### 3. Dynamic Imposter Scaling Engine
+### 5. Dynamic Imposter Scaling Engine
 - Scales dynamically with player count:
   - 1-3 players: 1 Infiltrator (Mafia).
   - 4-6 players: 2 Infiltrators (or 1 if set by host).
   - 7+ players: 3 Infiltrators.
 - Host can customize the Imposter setting (`Auto`, `1`, `2`, or `3`) directly from the waiting deck!
 
-### 4. Interactive 2D Waiting Deck Lobby & Live Wardrobe Customizer
+### 6. Interactive 2D Waiting Deck Lobby & Live Wardrobe Customizer
 - Players spawn directly on the 2D canvas in the lobby to walk around together before the match starts!
-- Open the **Wardrobe Drawer** (via proximity `[E]` at the Wardrobe Pod or clicking **"WARDROBE"** in the top bar):
-  - **10 Exo-Suit Colorways**: Crimson Vanguard, Cobalt Striker, Emerald Matrix, Solar Pulse, Hyper Orange, Void Nebula, Neon Flamingo, Quantum Cyan, Arctic Frost, Stealth Obsidian.
-  - **5 Tactical Visor Glows**: Cyber Cyan, Laser Gold, Toxic Lime, Plasma Red, Ultraviolet.
-  - **6 Operative Class Titles**: Lead Architect, Quantum Engineer, Security Specialist, Systems Hacker, Chief Navigator, Bio-Technician.
-  - Synchronizes in real time with all players in the lobby!
+- Open the **Wardrobe Drawer** (via proximity `[E]` at the Wardrobe Pod or clicking **"WARDROBE"** in the top bar) to switch your Avengers hero, specialization title, and view authentic lore quotes.
+- Synchronizes in real time with all players in the lobby!
 
-### 5. Real-Time Mini-Map Radar HUD
+### 7. Real-Time Mini-Map Radar HUD
 - Persistent miniature radar in the top-right corner showing all 8 sectors, live player location blip, and real-time terminal health indicators. Toggleable with `[M]`.
 
 ---

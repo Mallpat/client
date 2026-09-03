@@ -24,33 +24,57 @@ async function testDreadnoughtEdition() {
 
   const roomId = 'dreadnought-test-' + Date.now();
 
-  // 1. Join Airlock & Waiting Deck
-  console.log('\n🧪 [Test 1] Joining Spaceship Waiting Deck & Roster...');
+  // 1. Join Airlock & Waiting Deck with Avengers Characters
+  console.log('\n🧪 [Test 1] Joining Spaceship Waiting Deck with Avengers Heroes...');
   await new Promise((resolve) => {
     const checkRoster = (data) => {
       if (data.players && data.players.length === 4) {
         p4.off('room_update', checkRoster);
-        console.log(`✓ 4 players in waiting deck: ${data.players.map(p => p.username).join(', ')}`);
+        console.log(`✓ 4 Avengers heroes in waiting deck: ${data.players.map(p => `${p.username} (${p.characterId})`).join(', ')}`);
+        console.log(`✓ Default room movement speed: ${data.playerSpeed}x`);
         console.log(`✓ Calculated Imposters for 4 players: ${data.calculatedImposters}`);
+        if (!data.players.every(p => p.characterId)) {
+          throw new Error('Some players missing characterId!');
+        }
         resolve();
       }
     };
     p4.on('room_update', checkRoster);
 
-    p1.emit('join_room', { roomId, username: 'Vanguard_1', color: '#ef4444', visorColor: '#06b6d4', operativeTitle: 'Lead Architect' });
-    setTimeout(() => p2.emit('join_room', { roomId, username: 'Striker_2', color: '#3b82f6', visorColor: '#f59e0b', operativeTitle: 'Quantum Engineer' }), 50);
-    setTimeout(() => p3.emit('join_room', { roomId, username: 'Matrix_3', color: '#10b981', visorColor: '#10b981', operativeTitle: 'Security Specialist' }), 100);
-    setTimeout(() => p4.emit('join_room', { roomId, username: 'Ghost_4', color: '#8b5cf6', visorColor: '#a855f7', operativeTitle: 'Systems Hacker' }), 150);
+    p1.emit('join_room', { roomId, username: 'Iron_Man', characterId: 'ironman', color: '#dc2626', visorColor: '#38bdf8', operativeTitle: 'Genius Engineer' });
+    setTimeout(() => p2.emit('join_room', { roomId, username: 'Cap_Rogers', characterId: 'cap', color: '#2563eb', visorColor: '#ffffff', operativeTitle: 'Tactical Vanguard' }), 50);
+    setTimeout(() => p3.emit('join_room', { roomId, username: 'Thor_Odinson', characterId: 'thor', color: '#38bdf8', visorColor: '#facc15', operativeTitle: 'High-Voltage Specialist' }), 100);
+    setTimeout(() => p4.emit('join_room', { roomId, username: 'Bruce_Hulk', characterId: 'hulk', color: '#16a34a', visorColor: '#4ade80', operativeTitle: 'Gamma Specialist' }), 150);
   });
 
-  // 2. Test Wardrobe Appearance Customization in Lobby
-  console.log('\n🧪 [Test 2] Testing real-time Wardrobe Customization in Lobby...');
+  // 2. Test Admin Speed Calibration
+  console.log('\n🧪 [Test 2] Host calibrating Operative Movement Speed to 3.2x...');
+  await new Promise((resolve) => {
+    const onSpeedUpdate = (data) => {
+      if (data.playerSpeed === 3.2) {
+        p3.off('room_update', onSpeedUpdate);
+        console.log(`✓ Admin speed successfully synced to all operatives: playerSpeed = ${data.playerSpeed}x`);
+        resolve();
+      }
+    };
+    p3.on('room_update', onSpeedUpdate);
+
+    // Host p1 sets speed to 3.2
+    p1.emit('set_game_settings', {
+      roomId,
+      imposterSetting: 'auto',
+      playerSpeed: 3.2
+    });
+  });
+
+  // 3. Test Wardrobe Appearance Customization in Lobby (Hero switch to Spider-Man)
+  console.log('\n🧪 [Test 3] Testing real-time Wardrobe Customization (Switching hero to Spider-Man)...');
   await new Promise((resolve) => {
     const onUpdate = (data) => {
       const updatedP2 = data.players.find(p => p.id === p2.id);
-      if (updatedP2 && updatedP2.color === '#ec4899') {
+      if (updatedP2 && updatedP2.characterId === 'spiderman') {
         p1.off('room_update', onUpdate);
-        console.log(`✓ Player 2 wardrobe update broadcasted to all: Color=${updatedP2.color}, Visor=${updatedP2.visorColor}, Title=${updatedP2.operativeTitle}`);
+        console.log(`✓ Player 2 hero switch broadcasted to all: Hero=${updatedP2.characterId}, Title=${updatedP2.operativeTitle}`);
         resolve();
       }
     };
@@ -58,9 +82,10 @@ async function testDreadnoughtEdition() {
 
     p2.emit('update_appearance', {
       roomId,
-      color: '#ec4899', // Neon Flamingo
-      visorColor: '#ef4444',
-      operativeTitle: 'Cyber Infiltrator'
+      characterId: 'spiderman',
+      color: '#dc2626',
+      visorColor: '#ffffff',
+      operativeTitle: 'Web-Slinging Infiltrator'
     });
   });
 
