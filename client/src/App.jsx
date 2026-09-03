@@ -30,8 +30,20 @@ import {
   Volume2
 } from 'lucide-react';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
-const socket = io(SERVER_URL, {
+const getInitialServerUrl = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('code_mafia_server_url');
+    if (saved) return saved;
+    if (import.meta.env.VITE_SERVER_URL) return import.meta.env.VITE_SERVER_URL;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
+  }
+  return import.meta.env.VITE_SERVER_URL || '';
+};
+
+const SERVER_URL = getInitialServerUrl();
+const socket = io(SERVER_URL || 'http://localhost:5000', {
   autoConnect: true,
   reconnectionAttempts: 10,
   reconnectionDelay: 1000
@@ -68,6 +80,8 @@ export default function App() {
     return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
   });
   const [selectedColor, setSelectedColor] = useState(PLAYER_COLORS[0].hex);
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [serverUrlInput, setServerUrlInput] = useState(SERVER_URL || '');
 
   // Authoritative State from Server
   const [phase, setPhase] = useState('LOBBY'); // 'LOBBY' | 'DAY' | 'NIGHT' | 'VOTING' | 'GAME_OVER'
@@ -910,11 +924,70 @@ export default function App() {
             onSubmit={(e) => {
               e.preventDefault();
               if (!roomId.trim() || !username.trim()) return;
+              if (!connected) {
+                setShowServerConfig(true);
+                alert("⚠️ Cannot Board: Game Server Offline!\n\nYour game frontend is running on Vercel, but it cannot connect to the backend WebSocket server.\n\n👉 Deploy your backend to Render.com (free 2-minute setup) and paste your live Render URL into the 'Server URL' field below!");
+                return;
+              }
               socket.emit('join_room', { roomId: roomId.trim(), username: username.trim(), color: selectedColor });
               setInRoom(true);
             }}
             style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
           >
+            {/* Server Connection Status Banner */}
+            <div style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: connected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.15)',
+              border: connected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '11px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: connected ? '#10b981' : '#f87171', fontWeight: 700 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
+                  {connected ? 'GAME SERVER ONLINE' : 'GAME SERVER OFFLINE'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowServerConfig(!showServerConfig)}
+                  style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >
+                  {showServerConfig ? 'Close' : '⚙️ Server URL'}
+                </button>
+              </div>
+              {!connected && !showServerConfig && (
+                <div style={{ color: '#cbd5e1', fontSize: '10px', lineHeight: '1.4' }}>
+                  Target: <span style={{ color: '#f87171', fontFamily: 'monospace' }}>{SERVER_URL || 'None'}</span>. Click <b style={{ color: '#38bdf8' }}>⚙️ Server URL</b> to enter your Render backend link.
+                </div>
+              )}
+              {showServerConfig && (
+                <div style={{ marginTop: '4px', display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    placeholder="https://your-server.onrender.com"
+                    value={serverUrlInput}
+                    onChange={(e) => setServerUrlInput(e.target.value)}
+                    style={{ flex: 1, padding: '6px 8px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!serverUrlInput.trim()) return;
+                      const formatted = serverUrlInput.trim().replace(/\/$/, '');
+                      localStorage.setItem('code_mafia_server_url', formatted);
+                      window.location.reload();
+                    }}
+                    style={{ padding: '6px 12px', backgroundColor: '#0284c7', border: 'none', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Connect
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Callsign */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -979,24 +1052,26 @@ export default function App() {
 
             <button
               type="submit"
-              disabled={!connected || !roomId.trim() || !username.trim()}
+              disabled={!roomId.trim() || !username.trim()}
               style={{
                 width: '100%',
                 padding: '14px',
                 marginTop: '4px',
-                background: connected ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#334155',
-                border: '1px solid #38bdf8',
+                background: connected
+                  ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                  : 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                border: connected ? '1px solid #38bdf8' : '1px solid #ef4444',
                 borderRadius: '8px',
                 color: '#ffffff',
                 fontSize: '13px',
                 fontWeight: 800,
                 letterSpacing: '1px',
                 fontFamily: 'inherit',
-                cursor: connected ? 'pointer' : 'not-allowed',
-                boxShadow: connected ? '0 0 20px rgba(56, 189, 248, 0.4)' : 'none'
+                cursor: (!roomId.trim() || !username.trim()) ? 'not-allowed' : 'pointer',
+                boxShadow: connected ? '0 0 20px rgba(56, 189, 248, 0.4)' : '0 0 15px rgba(239, 68, 68, 0.4)'
               }}
             >
-              BOARD SHIP AIRLOCK ➔
+              {connected ? 'BOARD SHIP AIRLOCK ➔' : '⚠️ BACKEND OFFLINE (CLICK FOR HELP)'}
             </button>
           </form>
         </div>
