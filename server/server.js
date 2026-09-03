@@ -9,7 +9,12 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Code Mafia 2D Spaceship Server', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'Code Mafia 2D Dreadnought Server',
+    version: '2.0.0-hackathon',
+    timestamp: new Date().toISOString()
+  });
 });
 
 const server = http.createServer(app);
@@ -17,86 +22,172 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// INITIAL TERMINAL CHALLENGES
+// =============================================================================
+// 6 EXPANDED REAL-WORLD ENGINEERING DEBUGGING TERMINALS (2400 x 1800 MAP)
+// =============================================================================
 function createInitialTerminals() {
   return [
     {
-      id: 'terminal-a',
-      name: 'Terminal A // Array Deduplication',
-      roomName: 'Server Room (North)',
-      x: 600,
-      y: 140,
+      id: 'terminal-1',
+      name: 'Terminal 1 // Hyperspace Matrix Rotation',
+      roomName: 'Command Bridge (North)',
+      x: 1200,
+      y: 240,
       solved: false,
       sabotaged: false,
-      functionName: 'deduplicateAndSort',
-      description: 'The telemetry log contains redundant packets. Write deduplicateAndSort(arr) to return a new array of numbers with duplicates removed, sorted in ascending numerical order.',
-      starterCode: `function deduplicateAndSort(arr) {\n  // BUG: Mutates original array and fails on numerical order\n  return arr.sort();\n}`,
-      code: `function deduplicateAndSort(arr) {\n  // BUG: Mutates original array and fails on numerical order\n  return arr.sort();\n}`,
+      functionName: 'rotateMatrix90',
+      description: 'The navigation telemetry matrix must be rotated 90 degrees clockwise to align with the jump gate. Implement rotateMatrix90(matrix) without mutating the input.',
+      starterCode: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
+      code: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
       tests: [
-        { input: [[3, 1, 2, 3, 2]], expected: [1, 2, 3] },
-        { input: [[10, 5, 10, 20, 1]], expected: [1, 5, 10, 20] },
-        { input: [[42]], expected: [42] },
-        { input: [[-5, 2, -5, 0, 10, -2]], expected: [-5, -2, 0, 2, 10] }
+        {
+          input: [[[1, 2], [3, 4]]],
+          expected: [[3, 1], [4, 2]]
+        },
+        {
+          input: [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]],
+          expected: [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
+        },
+        {
+          input: [[[5]]],
+          expected: [[5]]
+        }
       ]
     },
     {
-      id: 'terminal-b',
-      name: 'Terminal B // Arithmetic Bug',
-      roomName: 'Algorithm Lab (East)',
-      x: 960,
-      y: 450,
+      id: 'terminal-2',
+      name: 'Terminal 2 // LRU Cache Eviction',
+      roomName: 'AI & Quantum Mainframe (North-West)',
+      x: 550,
+      y: 320,
       solved: false,
       sabotaged: false,
-      functionName: 'calculateSubsystemSum',
-      description: 'The reactor power balancing formula is malfunctioning. Write calculateSubsystemSum(a, b) to return the exact mathematical sum of numbers a and b.',
-      starterCode: `function calculateSubsystemSum(a, b) {\n  // BUG: Subtracts instead of adding\n  return a - b;\n}`,
-      code: `function calculateSubsystemSum(a, b) {\n  // BUG: Subtracts instead of adding\n  return a - b;\n}`,
+      functionName: 'evictStaleKeys',
+      description: 'The AI core memory buffer has stale telemetry keys. Implement evictStaleKeys(cache, maxAge) that removes all key-value entries with age > maxAge and returns the cleaned object.',
+      starterCode: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
+      code: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
       tests: [
-        { input: [12, 18], expected: 30 },
-        { input: [-5, 5], expected: 0 },
-        { input: [100, 250], expected: 350 },
-        { input: [0, 0], expected: 0 },
-        { input: [-40, -10], expected: -50 }
+        {
+          input: [{ telemetry_a: 15, telemetry_b: 45, telemetry_c: 5 }, 20],
+          expected: { telemetry_a: 15, telemetry_c: 5 }
+        },
+        {
+          input: [{ ping: 100, pong: 200 }, 50],
+          expected: {}
+        },
+        {
+          input: [{ node_x: 2, node_y: 4 }, 10],
+          expected: { node_x: 2, node_y: 4 }
+        }
       ]
     },
     {
-      id: 'terminal-c',
-      name: 'Terminal C // Palindrome Validator',
-      roomName: 'Security Vault (West)',
-      x: 240,
-      y: 450,
+      id: 'terminal-3',
+      name: 'Terminal 3 // Signal Packet Defragmenter',
+      roomName: 'Communications & Sensor Array (North-East)',
+      x: 1850,
+      y: 320,
       solved: false,
       sabotaged: false,
-      functionName: 'validatePassphrase',
-      description: 'The security vault airlock requires a palindrome passphrase. Write validatePassphrase(str) to return true if str is a palindrome (ignoring casing, spaces, and non-alphanumeric chars), false otherwise.',
-      starterCode: `function validatePassphrase(str) {\n  // BUG: Flawed length comparison\n  return str.length > 3;\n}`,
-      code: `function validatePassphrase(str) {\n  // BUG: Flawed length comparison\n  return str.length > 3;\n}`,
+      functionName: 'defragmentPackets',
+      description: 'The deep-space radio array received fragmented packets out of order. Implement defragmentPackets(packets) to sort packets by their .seq number and concatenate their .data strings into one message.',
+      starterCode: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
+      code: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
       tests: [
-        { input: ['racecar'], expected: true },
-        { input: ['hello world'], expected: false },
-        { input: ['A man, a plan, a canal: Panama'], expected: true },
-        { input: ['Madam'], expected: true },
-        { input: ['12321'], expected: true },
-        { input: ['CodeBreach'], expected: false }
+        {
+          input: [[{ seq: 3, data: 'WORLD' }, { seq: 1, data: 'HELLO ' }, { seq: 2, data: 'SPACESHIP ' }]],
+          expected: 'HELLO SPACESHIP WORLD'
+        },
+        {
+          input: [[{ seq: 2, data: '9' }, { seq: 1, data: 'AETHER-' }]],
+          expected: 'AETHER-9'
+        },
+        {
+          input: [[{ seq: 1, data: 'BEACON_ONLINE' }]],
+          expected: 'BEACON_ONLINE'
+        }
+      ]
+    },
+    {
+      id: 'terminal-4',
+      name: 'Terminal 4 // Cryptographic Checksum Validator',
+      roomName: 'Security & Surveillance Vault (West)',
+      x: 380,
+      y: 950,
+      solved: false,
+      sabotaged: false,
+      functionName: 'validateSecurityChecksum',
+      description: 'The security vault airlock requires a parity checksum. Write validateSecurityChecksum(str) to return true if the sum of ASCII character codes is even, and false if odd.',
+      starterCode: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
+      code: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
+      tests: [
+        { input: ['AB'], expected: false }, // 65 + 66 = 131 (odd -> false)
+        { input: ['AA'], expected: true },  // 65 + 65 = 130 (even -> true)
+        { input: ['SECURITY'], expected: true }, // 632 (even -> true)
+        { input: ['CYBER'], expected: false }, // 373 (odd -> false)
+        { input: ['VAULT'], expected: true }   // 396 (even -> true)
+      ]
+    },
+    {
+      id: 'terminal-5',
+      name: 'Terminal 5 // Gene Sequence Splicer',
+      roomName: 'Cybernetics & Bio-Lab (East)',
+      x: 2000,
+      y: 950,
+      solved: false,
+      sabotaged: false,
+      functionName: 'spliceNucleotides',
+      description: 'The bio-lab stasis gene requires splicing. Implement spliceNucleotides(dna, target) which returns the count of times target substring appears in the dna strand without overlapping.',
+      starterCode: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
+      code: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
+      tests: [
+        { input: ['ATCGATCGATCG', 'ATCG'], expected: 3 },
+        { input: ['AAAA', 'AA'], expected: 2 },
+        { input: ['GCATGC', 'XYZ'], expected: 0 },
+        { input: ['CGCGCGC', 'CGC'], expected: 2 }
+      ]
+    },
+    {
+      id: 'terminal-6',
+      name: 'Terminal 6 // Plasma Pressure Balancer',
+      roomName: 'Quantum Hyper-Reactor Core (South)',
+      x: 1200,
+      y: 1550,
+      solved: false,
+      sabotaged: false,
+      functionName: 'convergePlasmaFrequency',
+      description: 'The quantum reactor core requires balancing. Write convergePlasmaFrequency(base, target) to return the minimum number of step adjustments needed to reach target if each step can multiply by 2 or add 1 (starting at base).',
+      starterCode: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
+      code: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
+      tests: [
+        { input: [1, 4], expected: 2 },  // 1 -> 2 -> 4 (2 steps)
+        { input: [2, 5], expected: 2 },  // 2 -> 4 -> 5 (2 steps)
+        { input: [3, 3], expected: 0 },
+        { input: [1, 7], expected: 4 }   // 1 -> 2 -> 3 -> 6 -> 7 (4 steps)
       ]
     }
   ];
 }
 
 const PLAYER_COLORS = [
-  '#ef4444', // Red
-  '#3b82f6', // Blue
-  '#10b981', // Green
-  '#f59e0b', // Yellow
-  '#f97316', // Orange
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#06b6d4'  // Cyan
+  '#ef4444', // Crimson Red
+  '#3b82f6', // Cobalt Blue
+  '#10b981', // Emerald Matrix
+  '#f59e0b', // Solar Amber
+  '#f97316', // Hyper Orange
+  '#8b5cf6', // Void Purple
+  '#ec4899', // Neon Pink
+  '#06b6d4', // Quantum Cyan
+  '#e2e8f0', // Arctic White
+  '#64748b'  // Stealth Slate
 ];
 
 // Room state storage: roomId -> room
 const rooms = new Map();
 
+// =============================================================================
+// SANDBOXED VM CODE EXECUTION
+// =============================================================================
 function evaluateTerminalInSandbox(terminal, userCode) {
   let passedCount = 0;
   const testLogs = [];
@@ -118,77 +209,113 @@ function evaluateTerminalInSandbox(terminal, userCode) {
       if (isMatch) {
         passedCount++;
         testLogs.push({
-          index: idx + 1,
+          testNumber: idx + 1,
           passed: true,
-          input: test.input,
-          expected: test.expected,
-          received: result
+          input: JSON.stringify(test.input),
+          expected: JSON.stringify(test.expected),
+          output: JSON.stringify(result)
         });
       } else {
         testLogs.push({
-          index: idx + 1,
+          testNumber: idx + 1,
           passed: false,
-          input: test.input,
-          expected: test.expected,
-          received: result
+          input: JSON.stringify(test.input),
+          expected: JSON.stringify(test.expected),
+          output: JSON.stringify(result)
         });
       }
     } catch (err) {
       testLogs.push({
-        index: idx + 1,
+        testNumber: idx + 1,
         passed: false,
-        input: test.input,
-        expected: test.expected,
-        received: null,
+        input: JSON.stringify(test.input),
+        expected: JSON.stringify(test.expected),
         error: err.message
       });
     }
   });
 
-  const isSolved = passedCount === terminal.tests.length;
-  return { isSolved, passedCount, total: terminal.tests.length, testLogs };
+  return {
+    passedCount,
+    total: terminal.tests.length,
+    isSolved: passedCount === terminal.tests.length,
+    logs: testLogs
+  };
 }
 
+// =============================================================================
+// DYNAMIC IMPOSTER SCALING ENGINE
+// =============================================================================
+function calculateImposterCount(playerCount, customSetting) {
+  // Max imposters must allow crew to maintain initial strict majority
+  const maxAllowed = Math.max(1, Math.floor((playerCount - 1) / 2));
+
+  if (customSetting && customSetting !== 'auto') {
+    const parsed = parseInt(customSetting, 10);
+    if (!isNaN(parsed) && parsed >= 1) {
+      return Math.min(parsed, maxAllowed);
+    }
+  }
+
+  // Auto scaling formula:
+  // 1-3 players: 1 imposter
+  // 4-6 players: 2 imposters
+  // 7+ players: 3 imposters (if allowed)
+  if (playerCount <= 3) return 1;
+  if (playerCount <= 6) return Math.min(2, maxAllowed);
+  return Math.min(3, maxAllowed);
+}
+
+// =============================================================================
+// ROOM STATE BROADCASTER (ROLE-MASKED)
+// =============================================================================
 function broadcastRoomState(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
 
   const solvedCount = room.terminals.filter((t) => t.solved).length;
+  const totalTerminals = room.terminals.length;
 
-  room.players.forEach((player) => {
-    const isMafia = player.role === 'MAFIA';
-    let fellowMafia = [];
-    if (isMafia) {
-      fellowMafia = room.players.filter((p) => p.role === 'MAFIA').map((p) => p.username);
-    }
+  room.players.forEach((targetPlayer) => {
+    const isTargetMafia = targetPlayer.role === 'MAFIA' && room.phase !== 'LOBBY';
 
-    // Sanitize players: only reveal true role if game over, or dead, or fellow mafia
-    const sanitizedPlayers = room.players.map((p) => {
-      const showRole = room.phase === 'GAME_OVER' || !p.isAlive || p.id === player.id || (isMafia && p.role === 'MAFIA');
+    // Mask roles unless Game Over or Target is Mafia seeing fellow Mafia
+    const maskedPlayers = room.players.map((p) => {
+      const isSelf = p.id === targetPlayer.id;
+      const revealRole =
+        room.phase === 'GAME_OVER' ||
+        isSelf ||
+        (isTargetMafia && p.role === 'MAFIA');
+
       return {
         id: p.id,
         username: p.username,
         color: p.color,
+        visorColor: p.visorColor || '#06b6d4',
+        operativeTitle: p.operativeTitle || 'Systems Engineer',
         x: p.x,
         y: p.y,
         isMoving: p.isMoving,
         facingLeft: p.facingLeft,
         isAlive: p.isAlive,
-        isHost: p.id === room.hostId,
-        votedFor: room.phase === 'VOTING' ? (p.votedFor ? 'VOTED' : null) : p.votedFor,
-        role: showRole ? p.role : 'UNKNOWN'
+        role: revealRole ? p.role : 'UNKNOWN',
+        votedFor: p.votedFor ? (room.phase === 'VOTING' ? 'VOTED' : p.votedFor) : null
       };
     });
 
-    io.to(player.id).emit('room_update', {
+    const fellowMafia = isTargetMafia
+      ? room.players.filter((p) => p.role === 'MAFIA').map((p) => p.username)
+      : [];
+
+    io.to(targetPlayer.id).emit('room_update', {
       roomId: room.id,
+      hostId: room.hostId,
+      isHost: room.hostId === targetPlayer.id,
       phase: room.phase,
       timer: room.timer,
-      hostId: room.hostId,
-      isHost: player.id === room.hostId,
-      myRole: player.role,
+      myRole: room.phase === 'LOBBY' ? 'PENDING' : targetPlayer.role,
       fellowMafia,
-      players: sanitizedPlayers,
+      players: maskedPlayers,
       terminals: room.terminals.map((t) => ({
         id: t.id,
         name: t.name,
@@ -197,14 +324,16 @@ function broadcastRoomState(roomId) {
         y: t.y,
         solved: t.solved,
         sabotaged: t.sabotaged,
-        description: t.description,
         functionName: t.functionName,
-        code: t.code,
-        totalTests: t.tests.length
+        description: t.description,
+        starterCode: t.starterCode,
+        testsCount: t.tests.length
       })),
       solvedCount,
-      totalTerminals: room.terminals.length,
-      chatMessages: room.chatMessages,
+      totalTerminals,
+      imposterSetting: room.imposterSetting || 'auto',
+      calculatedImposters: calculateImposterCount(room.players.length, room.imposterSetting),
+      chatMessages: room.chatMessages.slice(-40),
       lastEjection: room.lastEjection,
       gameWinner: room.gameWinner,
       winReason: room.winReason,
@@ -213,40 +342,43 @@ function broadcastRoomState(roomId) {
   });
 }
 
+// =============================================================================
+// WIN CONDITION EVALUATION
+// =============================================================================
 function checkWinConditions(roomId) {
   const room = rooms.get(roomId);
-  if (!room || room.phase === 'GAME_OVER') return false;
+  if (!room || room.phase === 'GAME_OVER' || room.phase === 'LOBBY') return false;
 
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const aliveMafia = alivePlayers.filter((p) => p.role === 'MAFIA');
   const aliveDevs = alivePlayers.filter((p) => p.role === 'DEV');
   const allTerminalsSolved = room.terminals.every((t) => t.solved);
 
-  // Condition 1: All 3 terminals fixed -> Developers win!
+  // Condition 1: All Terminals Fixed -> Developers Win!
   if (allTerminalsSolved) {
     room.phase = 'GAME_OVER';
     room.gameWinner = 'DEVELOPERS';
-    room.winReason = 'All 3 ship terminals stabilized! System 100% operational.';
+    room.winReason = 'All 6 spaceship dreadnought subsystems stabilized! The ship jumped to safety.';
     if (room.timerInterval) clearInterval(room.timerInterval);
     broadcastRoomState(roomId);
     return true;
   }
 
-  // Condition 2: All Mafia members ejected -> Developers win!
+  // Condition 2: All Mafia Ejected -> Developers Win!
   if (aliveMafia.length === 0) {
     room.phase = 'GAME_OVER';
     room.gameWinner = 'DEVELOPERS';
-    room.winReason = 'All Mafia infiltrators have been expelled from the spaceship!';
+    room.winReason = 'All Cyber Infiltrators have been identified and ejected into deep space!';
     if (room.timerInterval) clearInterval(room.timerInterval);
     broadcastRoomState(roomId);
     return true;
   }
 
-  // Condition 3: Mafia reaches parity or majority -> Mafia wins!
+  // Condition 3: Mafia reaches parity with remaining Crew -> Mafia Wins!
   if (aliveMafia.length >= aliveDevs.length) {
     room.phase = 'GAME_OVER';
     room.gameWinner = 'MAFIA';
-    room.winReason = 'The Mafia reached parity and overwhelmed the remaining crew!';
+    room.winReason = 'The Infiltrators reached parity and sabotaged primary life support!';
     if (room.timerInterval) clearInterval(room.timerInterval);
     broadcastRoomState(roomId);
     return true;
@@ -255,6 +387,9 @@ function checkWinConditions(roomId) {
   return false;
 }
 
+// =============================================================================
+// PHASE TIMERS & TRANSITIONS
+// =============================================================================
 function startPhaseTimer(roomId, phaseName, durationSeconds) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -295,28 +430,26 @@ function handlePhaseTimeout(roomId, expiredPhase) {
     startPhaseTimer(roomId, 'NIGHT', 30);
   } else if (expiredPhase === 'NIGHT') {
     // Transition from NIGHT (30s) -> VOTING (35s)
-    room.emergencyCaller = 'Station Power Grid';
+    room.emergencyCaller = 'Automated Power Grid Alarms';
     room.players.forEach((p) => { p.votedFor = null; });
     startPhaseTimer(roomId, 'VOTING', 35);
   } else if (expiredPhase === 'VOTING') {
-    // Voting timeout -> Tally votes
-    tallyVotesAndConclude(roomId);
+    // Tally votes
+    resolveVotingPhase(roomId);
   }
 }
 
-function tallyVotesAndConclude(roomId) {
+function resolveVotingPhase(roomId) {
   const room = rooms.get(roomId);
-  if (!room || room.phase !== 'VOTING') return;
-
-  if (room.timerInterval) clearInterval(room.timerInterval);
+  if (!room) return;
 
   const voteCounts = {};
-  let skipCount = 0;
+  let skipVotes = 0;
 
   room.players.forEach((p) => {
     if (p.isAlive && p.votedFor) {
       if (p.votedFor === 'SKIP') {
-        skipCount++;
+        skipVotes++;
       } else {
         voteCounts[p.votedFor] = (voteCounts[p.votedFor] || 0) + 1;
       }
@@ -324,66 +457,60 @@ function tallyVotesAndConclude(roomId) {
   });
 
   let maxVotes = 0;
-  let topCandidate = null;
+  let ejectedId = null;
   let isTie = false;
 
-  for (const [candidateId, count] of Object.entries(voteCounts)) {
+  for (const [suspectId, count] of Object.entries(voteCounts)) {
     if (count > maxVotes) {
       maxVotes = count;
-      topCandidate = candidateId;
+      ejectedId = suspectId;
       isTie = false;
     } else if (count === maxVotes) {
       isTie = true;
     }
   }
 
-  let ejectionResult = null;
-
-  if (skipCount >= maxVotes || isTie || !topCandidate) {
-    ejectionResult = {
-      wasEjected: false,
-      reason: skipCount >= maxVotes ? 'The crew voted to skip ejection.' : 'The vote resulted in a tie. No one was ejected.'
+  if (isTie || skipVotes >= maxVotes || maxVotes === 0 || !ejectedId) {
+    room.lastEjection = {
+      ejected: false,
+      message: 'Tie or skipped vote: No operative was ejected into deep space.'
     };
   } else {
-    const suspect = room.players.find((p) => p.id === topCandidate);
-    if (suspect && suspect.isAlive) {
-      suspect.isAlive = false;
-      const isMafia = suspect.role === 'MAFIA';
-      ejectionResult = {
-        wasEjected: true,
-        username: suspect.username,
-        role: suspect.role,
-        isMafia,
-        reason: `${suspect.username} was ejected into deep space.`
+    const ejectedPlayer = room.players.find((p) => p.id === ejectedId);
+    if (ejectedPlayer) {
+      ejectedPlayer.isAlive = false;
+      const wasMafia = ejectedPlayer.role === 'MAFIA';
+      room.lastEjection = {
+        ejected: true,
+        username: ejectedPlayer.username,
+        color: ejectedPlayer.color,
+        wasMafia,
+        message: `${ejectedPlayer.username} was ejected. They were ${wasMafia ? 'an INFILTRATOR (MAFIA)!' : 'an innocent CREW DEVELOPER!'}`
       };
     }
   }
 
-  room.lastEjection = ejectionResult;
-  const isGameOver = checkWinConditions(roomId);
   broadcastRoomState(roomId);
 
-  if (!isGameOver) {
-    // 5-second dramatic reveal before resuming Day phase
+  if (!checkWinConditions(roomId)) {
+    // Return to DAY phase
     setTimeout(() => {
-      const freshRoom = rooms.get(roomId);
-      if (!freshRoom || freshRoom.phase === 'GAME_OVER') return;
-
-      freshRoom.emergencyCaller = null;
-      freshRoom.players.forEach((p) => { p.votedFor = null; });
       startPhaseTimer(roomId, 'DAY', 90);
-    }, 5000);
+    }, 4000);
   }
 }
 
+// =============================================================================
+// SOCKET.IO EVENT HANDLERS
+// =============================================================================
 io.on('connection', (socket) => {
   console.log(`[Socket Connected] ID: ${socket.id}`);
 
-  // 1. Join Room
-  socket.on('join_room', ({ roomId, username, color }) => {
+  // 1. Join Room & Spawn in Central Assembly Bay (Lobby)
+  socket.on('join_room', ({ roomId, username, color, visorColor, operativeTitle }) => {
     if (!roomId || !roomId.trim()) return;
     const cleanRoom = roomId.trim();
-    const cleanName = (username && username.trim()) || `Astronaut_${socket.id.substring(0, 4)}`;
+    const cleanName = (username && username.trim()) || `Operative_${socket.id.substring(0, 4)}`;
 
     socket.join(cleanRoom);
 
@@ -394,6 +521,7 @@ io.on('connection', (socket) => {
         phase: 'LOBBY',
         timer: 90,
         timerInterval: null,
+        imposterSetting: 'auto',
         players: [],
         terminals: createInitialTerminals(),
         chatMessages: [],
@@ -407,18 +535,19 @@ io.on('connection', (socket) => {
     const room = rooms.get(cleanRoom);
     let player = room.players.find((p) => p.id === socket.id);
 
-    // Pick color
     const selectedColor = color || PLAYER_COLORS[room.players.length % PLAYER_COLORS.length];
 
     if (!player) {
-      // Spawn in Cafeteria center
-      const spawnOffset = (room.players.length * 40) % 160;
+      // Spawn at Central Atrium Hub (x: 1200, y: 900)
+      const spawnOffset = (room.players.length * 45) % 220;
       player = {
         id: socket.id,
         username: cleanName,
         color: selectedColor,
-        x: 560 + spawnOffset,
-        y: 440 + (spawnOffset % 50),
+        visorColor: visorColor || '#06b6d4',
+        operativeTitle: operativeTitle || 'Systems Engineer',
+        x: 1120 + spawnOffset,
+        y: 880 + (spawnOffset % 60),
         isMoving: false,
         facingLeft: false,
         role: 'DEV',
@@ -429,21 +558,47 @@ io.on('connection', (socket) => {
     } else {
       player.username = cleanName;
       player.color = selectedColor;
+      if (visorColor) player.visorColor = visorColor;
+      if (operativeTitle) player.operativeTitle = operativeTitle;
     }
 
     broadcastRoomState(cleanRoom);
   });
 
-  // 2. Start Game
+  // 2. Real-Time Wardrobe / Appearance Customization (Live in Lobby or Game)
+  socket.on('update_appearance', ({ roomId, color, visorColor, operativeTitle }) => {
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player) return;
+
+    if (color) player.color = color;
+    if (visorColor) player.visorColor = visorColor;
+    if (operativeTitle) player.operativeTitle = operativeTitle;
+
+    broadcastRoomState(roomId);
+  });
+
+  // 3. Host Updates Game Settings (Imposter Count, etc.)
+  socket.on('set_game_settings', ({ roomId, imposterSetting }) => {
+    const room = rooms.get(roomId);
+    if (!room || room.hostId !== socket.id || room.phase !== 'LOBBY') return;
+
+    room.imposterSetting = imposterSetting || 'auto';
+    broadcastRoomState(roomId);
+  });
+
+  // 4. Start Game (With Dynamic Imposter Scaling & Central Deployment)
   socket.on('start_game', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room || room.hostId !== socket.id) return;
     if (room.players.length < 2) {
-      socket.emit('error_message', 'Need at least 2 players to start Code Mafia.');
+      socket.emit('error_message', 'At least 2 operatives are required to initiate spaceship dreadnought mission.');
       return;
     }
 
-    // Reset Terminals
+    // Reset Terminals & Game Metrics
     room.terminals = createInitialTerminals();
     room.gameWinner = null;
     room.winReason = null;
@@ -451,43 +606,45 @@ io.on('connection', (socket) => {
     room.emergencyCaller = null;
     room.chatMessages = [];
 
-    // Assign Roles: 1 Mafia per 3 players (at least 1)
-    const mafiaCount = Math.max(1, Math.floor(room.players.length / 3));
+    // Calculate Imposters based on player count and host settings
+    const imposterCount = calculateImposterCount(room.players.length, room.imposterSetting);
     const shuffled = [...room.players].sort(() => 0.5 - Math.random());
 
     room.players.forEach((p, index) => {
       p.role = 'DEV';
       p.isAlive = true;
       p.votedFor = null;
-      // Spawn in Cafeteria
-      p.x = 540 + (index * 35);
-      p.y = 440 + ((index % 2) * 40);
+      // Spawn scattered across Central Atrium Hub (x: 1050-1350, y: 800-1000)
+      p.x = 1080 + ((index * 50) % 240);
+      p.y = 860 + (Math.floor(index / 5) * 45);
       p.isMoving = false;
       p.facingLeft = false;
     });
 
-    for (let i = 0; i < mafiaCount; i++) {
+    for (let i = 0; i < imposterCount; i++) {
       shuffled[i].role = 'MAFIA';
     }
 
-    // Start in DAY phase (90s)
+    // Start with 90s Day Sprint
     startPhaseTimer(roomId, 'DAY', 90);
   });
 
-  // 3. Player Movement (High Frequency)
+  // 5. Player Movement (Supported in both LOBBY and Active Phases)
   socket.on('player_move', ({ roomId, x, y, isMoving, facingLeft }) => {
     const room = rooms.get(roomId);
-    if (!room || (room.phase !== 'DAY' && room.phase !== 'NIGHT')) return;
+    if (!room) return;
+
+    // Movement allowed in LOBBY, DAY, and NIGHT
+    if (room.phase !== 'LOBBY' && room.phase !== 'DAY' && room.phase !== 'NIGHT') return;
 
     const player = room.players.find((p) => p.id === socket.id);
-    if (!player || !player.isAlive) return;
+    if (!player || (!player.isAlive && room.phase !== 'LOBBY')) return;
 
     player.x = x;
     player.y = y;
     player.isMoving = isMoving;
     player.facingLeft = facingLeft;
 
-    // Broadcast to other players in room
     socket.to(roomId).emit('player_moved', {
       id: socket.id,
       x,
@@ -497,10 +654,10 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 4. Run Terminal Tests
+  // 6. Run Terminal Tests
   socket.on('run_terminal_tests', ({ roomId, terminalId, userCode }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || (room.phase !== 'DAY' && room.phase !== 'NIGHT')) return;
 
     const player = room.players.find((p) => p.id === socket.id);
     if (!player || !player.isAlive) return;
@@ -509,29 +666,29 @@ io.on('connection', (socket) => {
     if (!terminal) return;
 
     terminal.code = userCode;
-    const evalResult = evaluateTerminalInSandbox(terminal, userCode);
+    const results = evaluateTerminalInSandbox(terminal, userCode);
 
-    if (evalResult.isSolved) {
+    if (results.isSolved) {
       terminal.solved = true;
       terminal.sabotaged = false;
+      room.chatMessages.push({
+        id: Date.now().toString(),
+        sender: 'SHIP-AI',
+        text: `[SYSTEM] ${terminal.name} has been stabilized by ${player.username}!`,
+        system: true
+      });
+      checkWinConditions(roomId);
     }
 
     socket.emit('terminal_test_results', {
       terminalId,
-      isSolved: evalResult.isSolved,
-      passedCount: evalResult.passedCount,
-      total: evalResult.total,
-      testLogs: evalResult.testLogs
+      ...results
     });
 
-    // Check if developers achieved win condition
-    const isWon = checkWinConditions(roomId);
-    if (!isWon) {
-      broadcastRoomState(roomId);
-    }
+    broadcastRoomState(roomId);
   });
 
-  // 5. Sabotage Terminal (Mafia only during Night phase)
+  // 7. Imposter Sabotage (Only during Night phase for Mafia)
   socket.on('sabotage_terminal', ({ roomId, terminalId }) => {
     const room = rooms.get(roomId);
     if (!room || room.phase !== 'NIGHT') return;
@@ -542,23 +699,23 @@ io.on('connection', (socket) => {
     const terminal = room.terminals.find((t) => t.id === terminalId);
     if (!terminal) return;
 
-    // Revert solved status and inject a bug
     terminal.solved = false;
     terminal.sabotaged = true;
-    terminal.code = terminal.starterCode + '\n// [SYSTEM FAULT: INJECTED SYNTAX MALFUNCTION]';
 
-    io.to(roomId).emit('terminal_sabotaged', {
-      terminalId,
-      terminalName: terminal.name
+    room.chatMessages.push({
+      id: Date.now().toString(),
+      sender: 'SHIP-AI',
+      text: `[WARNING] ${terminal.name} is experiencing electromagnetic interference!`,
+      system: true
     });
 
     broadcastRoomState(roomId);
   });
 
-  // 6. Call Emergency Standup (Cafeteria button)
+  // 8. Emergency Standup Lockdown Call
   socket.on('call_emergency', ({ roomId }) => {
     const room = rooms.get(roomId);
-    if (!room || (room.phase !== 'DAY' && room.phase !== 'NIGHT')) return;
+    if (!room || room.phase !== 'DAY') return;
 
     const player = room.players.find((p) => p.id === socket.id);
     if (!player || !player.isAlive) return;
@@ -566,31 +723,17 @@ io.on('connection', (socket) => {
     room.emergencyCaller = player.username;
     room.players.forEach((p) => { p.votedFor = null; });
 
+    room.chatMessages.push({
+      id: Date.now().toString(),
+      sender: 'SHIP-AI',
+      text: `🚨 EMERGENCY STANDUP TRIGGERED by ${player.username}! All operatives report to Central Lockdown deck.`,
+      system: true
+    });
+
     startPhaseTimer(roomId, 'VOTING', 35);
   });
 
-  // 7. Cast Vote
-  socket.on('cast_vote', ({ roomId, suspectId }) => {
-    const room = rooms.get(roomId);
-    if (!room || room.phase !== 'VOTING') return;
-
-    const voter = room.players.find((p) => p.id === socket.id);
-    if (!voter || !voter.isAlive || voter.votedFor) return;
-
-    voter.votedFor = suspectId;
-
-    // Check if all alive players voted
-    const alivePlayers = room.players.filter((p) => p.isAlive);
-    const allVoted = alivePlayers.every((p) => p.votedFor !== null);
-
-    if (allVoted) {
-      tallyVotesAndConclude(roomId);
-    } else {
-      broadcastRoomState(roomId);
-    }
-  });
-
-  // 8. Meeting Chat
+  // 9. Debate Chat
   socket.on('send_chat', ({ roomId, message }) => {
     const room = rooms.get(roomId);
     if (!room || !message || !message.trim()) return;
@@ -598,59 +741,58 @@ io.on('connection', (socket) => {
     const player = room.players.find((p) => p.id === socket.id);
     if (!player) return;
 
-    const chatItem = {
-      id: Math.random(),
+    room.chatMessages.push({
+      id: Date.now().toString(),
       sender: player.username,
       color: player.color,
-      isAlive: player.isAlive,
       text: message.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' })
-    };
-
-    room.chatMessages.push(chatItem);
-    if (room.chatMessages.length > 50) room.chatMessages.shift();
-
-    io.to(roomId).emit('chat_message', chatItem);
-  });
-
-  // 9. Restart Game
-  socket.on('restart_game', ({ roomId }) => {
-    const room = rooms.get(roomId);
-    if (!room || room.hostId !== socket.id) return;
-
-    if (room.timerInterval) clearInterval(room.timerInterval);
-    room.phase = 'LOBBY';
-    room.terminals = createInitialTerminals();
-    room.gameWinner = null;
-    room.winReason = null;
-    room.lastEjection = null;
-    room.emergencyCaller = null;
-    room.chatMessages = [];
-    room.players.forEach((p) => {
-      p.isAlive = true;
-      p.votedFor = null;
-      p.role = 'DEV';
+      system: false
     });
 
-    broadcastRoomState(roomId);
+    io.to(roomId).emit('chat_message', {
+      sender: player.username,
+      color: player.color,
+      text: message.trim()
+    });
   });
 
-  // 10. Disconnect
-  socket.on('disconnect', () => {
-    rooms.forEach((room, roomId) => {
-      room.players = room.players.filter((p) => p.id !== socket.id);
+  // 10. Cast Ballot in Voting
+  socket.on('cast_vote', ({ roomId, suspectId }) => {
+    const room = rooms.get(roomId);
+    if (!room || room.phase !== 'VOTING') return;
 
-      if (room.players.length === 0) {
-        if (room.timerInterval) clearInterval(room.timerInterval);
-        rooms.delete(roomId);
-      } else {
-        if (room.hostId === socket.id) {
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player || !player.isAlive || player.votedFor) return;
+
+    player.votedFor = suspectId;
+    broadcastRoomState(roomId);
+
+    // If all alive players have voted, resolve immediately
+    const alivePlayers = room.players.filter((p) => p.isAlive);
+    const allVoted = alivePlayers.every((p) => p.votedFor !== null);
+    if (allVoted) {
+      if (room.timerInterval) clearInterval(room.timerInterval);
+      resolveVotingPhase(roomId);
+    }
+  });
+
+  // 11. Disconnect
+  socket.on('disconnect', () => {
+    console.log(`[Socket Disconnected] ID: ${socket.id}`);
+    rooms.forEach((room, rId) => {
+      const idx = room.players.findIndex((p) => p.id === socket.id);
+      if (idx !== -1) {
+        room.players.splice(idx, 1);
+        if (room.hostId === socket.id && room.players.length > 0) {
           room.hostId = room.players[0].id;
         }
-        if (room.phase === 'DAY' || room.phase === 'NIGHT' || room.phase === 'VOTING') {
-          checkWinConditions(roomId);
+        if (room.players.length === 0) {
+          if (room.timerInterval) clearInterval(room.timerInterval);
+          rooms.delete(rId);
+        } else {
+          checkWinConditions(rId);
+          broadcastRoomState(rId);
         }
-        broadcastRoomState(roomId);
       }
     });
   });
@@ -658,7 +800,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`========================================`);
-  console.log(`🚀 Code Mafia 2D Spaceship listening on :${PORT}`);
-  console.log(`========================================`);
+  console.log(`🚀 Code Mafia Dreadnought Server listening on port ${PORT}`);
 });
