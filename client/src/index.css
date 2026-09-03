@@ -1,0 +1,165 @@
+/* CodeBreach // Cyberpunk Arena Stylesheet */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --bg-primary: #020617;
+  --bg-secondary: #0b0f19;
+  --bg-card: #111726;
+  --bg-surface: #182234;
+
+  --border-subtle: #1e293b;
+  --border-medium: #334155;
+  --border-active: #06b6d4;
+
+  --cyan-primary: #06b6d4;
+  --cyan-light: #22d3ee;
+  --cyan-glow: rgba(6, 182, 212, 0.35);
+
+  --emerald-primary: #10b981;
+  --emerald-light: #34d399;
+  --emerald-glow: rgba(16, 185, 129, 0.35);
+
+  --crimson-primary: #f43f5e;
+  --crimson-light: #fb7185;
+  --crimson-glow: rgba(244, 63, 94, 0.4);
+
+  --amber-primary: #f59e0b;
+  --amber-light: #fbbf24;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Cyberpunk Background Grid */
+.cyber-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Subtle scanlines effect */
+.scanline-overlay {
+  position: relative;
+}
+.scanline-overlay::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Sabotage Glitch & Blur Animation */
+.sabotage-compromised {
+  animation: sabotageJitter 0.25s infinite alternate ease-in-out;
+  filter: blur(3.5px) contrast(140%) hue-rotate(75deg);
+  position: relative;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.2s ease;
+}
+
+.sabotage-overlay-warning {
+  animation: hazardFlicker 0.6s infinite alternate ease-in-out;
+}
+
+@keyframes sabotageJitter {
+  0% {
+    transform: translate(0, 0) skew(0deg);
+  }
+  20% {
+    transform: translate(-3px, 2px) skew(-1.5deg);
+  }
+  40% {
+    transform: translate(3px, -2px) skew(1.2deg);
+  }
+  60% {
+    transform: translate(-2px, -1px) skew(-0.8deg);
+  }
+  80% {
+    transform: translate(2px, 3px) skew(1.6deg);
+  }
+  100% {
+    transform: translate(0, 0) skew(0deg);
+  }
+}
+
+@keyframes hazardFlicker {
+  0% {
+    opacity: 0.85;
+    box-shadow: 0 0 15px rgba(244, 63, 94, 0.4), inset 0 0 15px rgba(244, 63, 94, 0.3);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 30px rgba(244, 63, 94, 0.8), inset 0 0 25px rgba(244, 63, 94, 0.5);
+  }
+}
+
+/* Neon Pulse Animation for Warning and Active Status */
+@keyframes neonPulse {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.7));
+  }
+  50% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 2px rgba(6, 182, 212, 0.3));
+  }
+}
+
+.animate-pulse-glow {
+  animation: neonPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom Cyber Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Buttons and interactive micro-animations */
+button {
+  transition: all 0.15s ease;
+  user-select: none;
+}
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
