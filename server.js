@@ -3,10 +3,20 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const vm = require('vm');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+
+const distPath = path.join(__dirname, 'dist');
+const clientDistPath = path.join(__dirname, '..', 'dist');
+const activeDist = fs.existsSync(distPath) ? distPath : (fs.existsSync(clientDistPath) ? clientDistPath : null);
+
+if (activeDist) {
+  app.use(express.static(activeDist));
+}
 
 app.get('/health', (req, res) => {
   res.json({
@@ -14,6 +24,18 @@ app.get('/health', (req, res) => {
     service: 'Code Mafia 2D Dreadnought Server',
     version: '2.0.0-hackathon',
     timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/', (req, res) => {
+  if (activeDist && fs.existsSync(path.join(activeDist, 'index.html'))) {
+    return res.sendFile(path.join(activeDist, 'index.html'));
+  }
+  res.json({
+    status: 'ok',
+    service: 'Code Mafia 2D Dreadnought Server',
+    message: '🟢 Socket.IO Server is online and ready! Connect your game client.',
+    version: '2.0.0-hackathon'
   });
 });
 
