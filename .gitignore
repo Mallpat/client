@@ -5,8 +5,9 @@ client/node_modules/
 server/node_modules/
 
 # Production build output
-client/dist/
-dist/
+/client/dist/
+/dist/
+!server/dist/
 .uix/
 
 # Local Environment Variables

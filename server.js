@@ -27,7 +27,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
+app.get('*', (req, res, next) => {
+  if (req.path === '/health' || req.path.startsWith('/socket.io')) {
+    return next();
+  }
   if (activeDist && fs.existsSync(path.join(activeDist, 'index.html'))) {
     return res.sendFile(path.join(activeDist, 'index.html'));
   }
