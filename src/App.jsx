@@ -1,0 +1,3256 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import Editor from '@monaco-editor/react';
+import { io } from 'socket.io-client';
+import {
+  Terminal,
+  Zap,
+  Play,
+  Clock,
+  Trophy,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Copy,
+  Check,
+  RefreshCw,
+  LogOut,
+  Cpu,
+  Layers,
+  Dices,
+  Flame,
+  Shield,
+  Skull,
+  Send,
+  MessageSquare,
+  Users,
+  Radio,
+  Crown,
+  Eye,
+  X,
+  Volume2,
+  Compass,
+  MapPin,
+  Settings,
+  Sparkles,
+  Sliders,
+  Maximize2
+} from 'lucide-react';
+import { AVENGERS_HEROES, getHero, drawAvenger, drawFallenRelic, drawThanosSnap } from './avengers';
+
+const getInitialServerUrl = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('code_mafia_server_url');
+    if (saved) return saved;
+    if (import.meta.env.VITE_SERVER_URL) return import.meta.env.VITE_SERVER_URL;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
+  }
+  return import.meta.env.VITE_SERVER_URL || '';
+};
+
+const SERVER_URL = getInitialServerUrl();
+const socket = io(SERVER_URL || 'http://localhost:5000', {
+  autoConnect: true,
+  reconnectionAttempts: 15,
+  reconnectionDelay: 1000
+});
+
+// Backward-compatible fallback colorways
+const PLAYER_COLORS = AVENGERS_HEROES.map((h) => ({
+  name: h.name,
+  hex: h.primaryColor,
+  glow: h.glowColor
+}));
+
+const VISOR_COLORS = AVENGERS_HEROES.map((h) => ({
+  name: h.name + ' Glow',
+  hex: h.visorColor
+}));
+
+const OPERATIVE_TITLES = [
+  'Armored Avenger',
+  'First Avenger',
+  'God of Thunder',
+  'Gamma Juggernaut',
+  'Master Assassin',
+  'Web-Slinger',
+  'Sorcerer Supreme',
+  'King of Wakanda',
+  'Master Marksman'
+];
+
+const RANDOM_NAMES = [
+  'Tony_Stark',
+  'Steve_Rogers',
+  'Thor_Odinson',
+  'Bruce_Banner',
+  'Nat_Romanoff',
+  'Peter_Parker',
+  'Stephen_Strange',
+  'King_TChalla',
+  'Clint_Barton',
+  'Avenger_Prime'
+];
+
+// Map Dimensions (Expanded Dreadnought Megastructure: 3600 x 2700)
+const MAP_WIDTH = 3600;
+const MAP_HEIGHT = 2700;
+
+// Walkable Starship Deck Regions (Rooms and Overlapping Corridors)
+const WALKABLE_BOXES = [
+  // Central Atrium & Waiting Deck
+  { id: 'atrium', x1: 1340, y1: 1040, x2: 2260, y2: 1660 },
+
+  // Sector 1: Command Bridge (North)
+  { id: 'bridge', x1: 1340, y1: 180, x2: 2260, y2: 800 },
+  // North Corridor (Bridge <-> Atrium)
+  { id: 'corr_n', x1: 1720, y1: 760, x2: 1880, y2: 1080 },
+
+  // Sector 2: AI & Quantum Mainframe (North-West)
+  { id: 'mainframe', x1: 250, y1: 200, x2: 1050, y2: 850 },
+  // North-West Corridor (Mainframe <-> Central North)
+  { id: 'corr_nw', x1: 1010, y1: 560, x2: 1380, y2: 720 },
+
+  // Sector 3: Communications & Sensor Array (North-East)
+  { id: 'sensors', x1: 2550, y1: 200, x2: 3350, y2: 850 },
+  // North-East Corridor (Central North <-> Sensors)
+  { id: 'corr_ne', x1: 2220, y1: 560, x2: 2590, y2: 720 },
+
+  // Sector 4: Security & Surveillance Vault (West)
+  { id: 'vault', x1: 200, y1: 1100, x2: 1000, y2: 1850 },
+  // West Corridor (Vault <-> Central Atrium)
+  { id: 'corr_w', x1: 960, y1: 1320, x2: 1380, y2: 1480 },
+
+  // Sector 5: Cybernetics & Bio-Lab (East)
+  { id: 'biolab', x1: 2600, y1: 1100, x2: 3400, y2: 1850 },
+  // East Corridor (Central Atrium <-> Bio-Lab)
+  { id: 'corr_e', x1: 2220, y1: 1320, x2: 2640, y2: 1480 },
+
+  // Sector 6: Quantum Hyper-Reactor Core (South)
+  { id: 'reactor', x1: 1340, y1: 1900, x2: 2260, y2: 2550 },
+  // South Corridor (Central Atrium <-> Reactor)
+  { id: 'corr_s', x1: 1720, y1: 1620, x2: 1880, y2: 1940 },
+
+  // West Auxiliary Corridor (Mainframe <-> Vault)
+  { id: 'corr_aux_w', x1: 580, y1: 810, x2: 720, y2: 1140 },
+
+  // East Auxiliary Corridor (Sensors <-> Bio-Lab)
+  { id: 'corr_aux_e', x1: 2880, y1: 810, x2: 3020, y2: 1140 }
+];
+
+const CLIENT_TERMINALS = [
+  {
+    id: 'terminal-1',
+    name: 'Terminal 1 // Hyperspace Matrix Rotation',
+    roomName: 'Command Bridge (Sector 1 - North)',
+    x: 1800,
+    y: 400,
+    solved: false,
+    sabotaged: false,
+    functionName: 'rotateMatrix90',
+    description: 'The navigation telemetry matrix must be rotated 90 degrees clockwise to align with the jump gate. Implement rotateMatrix90(matrix) without mutating the input.',
+    starterCode: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
+    code: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
+    tests: [
+      { input: [[[1, 2], [3, 4]]], expected: [[3, 1], [4, 2]] },
+      { input: [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]], expected: [[7, 4, 1], [8, 5, 2], [9, 6, 3]] },
+      { input: [[[5]]], expected: [[5]] }
+    ]
+  },
+  {
+    id: 'terminal-2',
+    name: 'Terminal 2 // LRU Cache Eviction',
+    roomName: 'AI & Quantum Mainframe (Sector 2 - North-West)',
+    x: 650,
+    y: 500,
+    solved: false,
+    sabotaged: false,
+    functionName: 'evictStaleKeys',
+    description: 'The AI core memory buffer has stale telemetry keys. Implement evictStaleKeys(cache, maxAge) that removes all key-value entries with age > maxAge and returns the cleaned object.',
+    starterCode: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
+    code: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
+    tests: [
+      { input: [{ telemetry_a: 15, telemetry_b: 45, telemetry_c: 5 }, 20], expected: { telemetry_a: 15, telemetry_c: 5 } },
+      { input: [{ ping: 100, pong: 200 }, 50], expected: {} },
+      { input: [{ node_x: 2, node_y: 4 }, 10], expected: { node_x: 2, node_y: 4 } }
+    ]
+  },
+  {
+    id: 'terminal-3',
+    name: 'Terminal 3 // Signal Packet Defragmenter',
+    roomName: 'Communications & Sensor Array (Sector 3 - North-East)',
+    x: 2950,
+    y: 500,
+    solved: false,
+    sabotaged: false,
+    functionName: 'defragmentPackets',
+    description: 'The deep-space radio array received fragmented packets out of order. Implement defragmentPackets(packets) to sort packets by their .seq number and concatenate their .data strings into one message.',
+    starterCode: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
+    code: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
+    tests: [
+      { input: [[{ seq: 3, data: 'WORLD' }, { seq: 1, data: 'HELLO ' }, { seq: 2, data: 'SPACESHIP ' }]], expected: 'HELLO SPACESHIP WORLD' },
+      { input: [[{ seq: 2, data: '9' }, { seq: 1, data: 'AETHER-' }]], expected: 'AETHER-9' },
+      { input: [[{ seq: 1, data: 'BEACON_ONLINE' }]], expected: 'BEACON_ONLINE' }
+    ]
+  },
+  {
+    id: 'terminal-4',
+    name: 'Terminal 4 // Cryptographic Checksum Validator',
+    roomName: 'Security & Surveillance Vault (Sector 4 - West)',
+    x: 550,
+    y: 1450,
+    solved: false,
+    sabotaged: false,
+    functionName: 'validateSecurityChecksum',
+    description: 'The security vault airlock requires a parity checksum. Write validateSecurityChecksum(str) to return true if the sum of ASCII character codes is even, and false if odd.',
+    starterCode: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
+    code: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
+    tests: [
+      { input: ['AB'], expected: false },
+      { input: ['AA'], expected: true },
+      { input: ['SECURITY'], expected: true },
+      { input: ['CYBER'], expected: false },
+      { input: ['VAULT'], expected: true }
+    ]
+  },
+  {
+    id: 'terminal-5',
+    name: 'Terminal 5 // Gene Sequence Splicer',
+    roomName: 'Cybernetics & Bio-Lab (Sector 5 - East)',
+    x: 3050,
+    y: 1450,
+    solved: false,
+    sabotaged: false,
+    functionName: 'spliceNucleotides',
+    description: 'The bio-lab stasis gene requires splicing. Implement spliceNucleotides(dna, target) which returns the count of times target substring appears in the dna strand without overlapping.',
+    starterCode: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
+    code: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
+    tests: [
+      { input: ['ATCGATCGATCG', 'ATCG'], expected: 3 },
+      { input: ['AAAA', 'AA'], expected: 2 },
+      { input: ['GCATGC', 'XYZ'], expected: 0 },
+      { input: ['CGCGCGC', 'CGC'], expected: 2 }
+    ]
+  },
+  {
+    id: 'terminal-6',
+    name: 'Terminal 6 // Plasma Pressure Balancer',
+    roomName: 'Quantum Hyper-Reactor Core (Sector 6 - South)',
+    x: 1800,
+    y: 2250,
+    solved: false,
+    sabotaged: false,
+    functionName: 'convergePlasmaFrequency',
+    description: 'The quantum reactor core requires balancing. Write convergePlasmaFrequency(base, target) to return the minimum number of step adjustments needed to reach target if each step can multiply by 2 or add 1 (starting at base).',
+    starterCode: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
+    code: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
+    tests: [
+      { input: [1, 4], expected: 2 },
+      { input: [2, 5], expected: 2 },
+      { input: [3, 3], expected: 0 },
+      { input: [1, 7], expected: 4 }
+    ]
+  }
+];
+
+function evaluateTerminalLocally(terminal, userCode) {
+  let passedCount = 0;
+  const testLogs = [];
+
+  terminal.tests.forEach((test, idx) => {
+    try {
+      const fn = new Function('return ' + userCode)();
+      if (typeof fn !== 'function') {
+        throw new Error("Function '" + terminal.functionName + "' is not defined.");
+      }
+
+      const inputCopy = JSON.parse(JSON.stringify(test.input));
+      const result = fn(...inputCopy);
+      const isMatch = JSON.stringify(result) === JSON.stringify(test.expected);
+
+      if (isMatch) {
+        passedCount++;
+        testLogs.push({
+          testNumber: idx + 1,
+          passed: true,
+          input: JSON.stringify(test.input),
+          expected: JSON.stringify(test.expected),
+          output: JSON.stringify(result)
+        });
+      } else {
+        testLogs.push({
+          testNumber: idx + 1,
+          passed: false,
+          input: JSON.stringify(test.input),
+          expected: JSON.stringify(test.expected),
+          output: JSON.stringify(result)
+        });
+      }
+    } catch (err) {
+      testLogs.push({
+        testNumber: idx + 1,
+        passed: false,
+        input: JSON.stringify(test.input),
+        expected: JSON.stringify(test.expected),
+        error: err.message
+      });
+    }
+  });
+
+  return {
+    passedCount,
+    total: terminal.tests.length,
+    isSolved: passedCount === terminal.tests.length,
+    logs: testLogs
+  };
+}
+
+function isPositionWalkable(x, y, phase) {
+  const R = 14; // Operative hit-box collision radius
+
+  if (phase === 'LOBBY') {
+    // Strictly restricted inside Central Waiting Deck Room:
+    if (x < 1360 || x > 2240 || y < 1060 || y > 1640) {
+      return false;
+    }
+    // Prop Barriers in Lobby
+    if (Math.hypot(x - 1800, y - 1350) < 46) return false; // Central Emergency Standup
+    if (x >= 1515 && x <= 1585 && y >= 1105 && y <= 1195) return false; // Wardrobe Pod
+    return true;
+  }
+
+  // Active Game (DAY / NIGHT): Must be inside at least one walkable room or corridor
+  const inDeck = WALKABLE_BOXES.some(
+    (b) => x >= b.x1 + R && x <= b.x2 - R && y >= b.y1 + R && y <= b.y2 - R
+  );
+  if (!inDeck) return false;
+
+  // Specific solid prop obstacles & containment barriers across all sectors
+  if (Math.hypot(x - 1800, y - 1350) < 46) return false; // Central Emergency Standup
+  if (Math.hypot(x - 1800, y - 2250) < 60) return false; // Reactor Core Containment
+  if (Math.hypot(x - 1800, y - 400) < 44) return false;  // Hologram Table Pedestal
+  if (Math.hypot(x - 650, y - 500) < 40) return false;   // Mainframe Fan Pedestal
+  if (Math.hypot(x - 2950, y - 500) < 42) return false;  // Radar Console Pedestal
+  if (Math.hypot(x - 550, y - 1450) < 40) return false;  // Vault Console Pedestal
+  if (Math.hypot(x - 3050, y - 1450) < 44) return false; // Bio-Lab Cryo-Stasis Chamber
+  if (x >= 1515 && x <= 1585 && y >= 1105 && y <= 1195) return false; // Wardrobe Pod
+
+  return true;
+}
+
+function EliminationCinematicModal({ cutscene, onClose }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    let animId;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = 600;
+    canvas.height = 360;
+
+    const DURATION = 4800; // ms
+    const startTime = cutscene.startTime || Date.now();
+
+    const renderFrame = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, Math.max(0, elapsed / DURATION));
+      const time = elapsed / 1000;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawThanosSnap(ctx, cutscene.characterId || 'ironman', progress, time, canvas.width, canvas.height);
+
+      if (progress < 1) {
+        animId = requestAnimationFrame(renderFrame);
+      } else {
+        setTimeout(onClose, 300);
+      }
+    };
+
+    renderFrame();
+    return () => cancelAnimationFrame(animId);
+  }, [cutscene, onClose]);
+
+  const heroObj = getHero(cutscene.characterId || 'ironman');
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundColor: 'rgba(5, 7, 13, 0.94)',
+        backdropFilter: 'blur(20px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 150
+      }}
+    >
+      <div
+        style={{
+          width: '640px',
+          backgroundColor: '#090d16',
+          border: cutscene.wasMafia ? '2px solid #ef4444' : '2px solid #38bdf8',
+          borderRadius: '16px',
+          padding: '24px',
+          textAlign: 'center',
+          boxShadow: cutscene.wasMafia
+            ? '0 0 60px rgba(239, 68, 68, 0.4), 0 25px 50px rgba(0,0,0,0.9)'
+            : '0 0 60px rgba(56, 189, 248, 0.4), 0 25px 50px rgba(0,0,0,0.9)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+          <span style={{ fontSize: '18px' }}>⚡</span>
+          <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '2px', color: '#f59e0b' }}>
+            THANOS SNAP INITIATED // EJECTION CUTSCENE
+          </span>
+          <span style={{ fontSize: '18px' }}>⚡</span>
+        </div>
+
+        <canvas
+          ref={canvasRef}
+          style={{
+            width: '600px',
+            height: '360px',
+            borderRadius: '10px',
+            backgroundColor: '#030712',
+            border: '1px solid #1e293b',
+            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)'
+          }}
+        />
+
+        <div style={{ marginTop: '16px', width: '100%' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: heroObj.primaryColor, margin: '0 0 8px 0' }}>
+            {cutscene.username} ({heroObj.name})
+          </h2>
+          <div
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              backgroundColor: cutscene.wasMafia ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.15)',
+              border: cutscene.wasMafia ? '1px solid #ef4444' : '1px solid #38bdf8',
+              color: cutscene.wasMafia ? '#fca5a5' : '#7dd3fc',
+              fontSize: '13px',
+              fontWeight: 800,
+              display: 'inline-block'
+            }}
+          >
+            {cutscene.message || (cutscene.wasMafia ? 'An Infiltrator was vanished!' : 'An Innocent Hero was dissolved.')}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  // Connection & Room state
+  const [connected, setConnected] = useState(socket.connected);
+  const [inRoom, setInRoom] = useState(false);
+  const [roomId, setRoomId] = useState('spaceship-01');
+  const [username, setUsername] = useState(() => {
+    return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+  });
+
+  // Avengers Hero Character State
+  const [selectedHero, setSelectedHero] = useState(() => {
+    return localStorage.getItem('code_mafia_hero') || 'ironman';
+  });
+  const selectedHeroObj = useMemo(() => getHero(selectedHero), [selectedHero]);
+
+  const [selectedColor, setSelectedColor] = useState(selectedHeroObj.primaryColor);
+  const [selectedVisor, setSelectedVisor] = useState(selectedHeroObj.visorColor);
+  const [selectedTitle, setSelectedTitle] = useState(selectedHeroObj.roleTitle);
+
+  // Movement Speed (Synced from Admin/Server, balanced default 2.4)
+  const [playerSpeed, setPlayerSpeed] = useState(2.4);
+  const playerSpeedRef = useRef(2.4);
+  const [showAdminSpeedModal, setShowAdminSpeedModal] = useState(false);
+
+  // Elimination Dramatic Cutscene State
+  const [eliminationCutscene, setEliminationCutscene] = useState(null);
+
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [serverUrlInput, setServerUrlInput] = useState(SERVER_URL || '');
+  const [showWardrobe, setShowWardrobe] = useState(false);
+  const [showMiniMap, setShowMiniMap] = useState(true);
+
+  // Authoritative State from Server
+  const [phase, setPhase] = useState('LOBBY'); // 'LOBBY' | 'DAY' | 'NIGHT' | 'VOTING' | 'GAME_OVER'
+  const [timer, setTimer] = useState(90);
+  const [hostId, setHostId] = useState(null);
+  const [isHost, setIsHost] = useState(false);
+  const [myRole, setMyRole] = useState('DEV'); // 'DEV' | 'MAFIA' | 'PENDING'
+  const [fellowMafia, setFellowMafia] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [terminals, setTerminals] = useState([]);
+  const [solvedCount, setSolvedCount] = useState(0);
+  const [totalTerminals, setTotalTerminals] = useState(6);
+  const [imposterSetting, setImposterSetting] = useState('auto');
+  const [calculatedImposters, setCalculatedImposters] = useState(1);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [lastEjection, setLastEjection] = useState(null);
+  const [gameWinner, setGameWinner] = useState(null);
+  const [winReason, setWinReason] = useState(null);
+  const [emergencyCaller, setEmergencyCaller] = useState(null);
+
+  // Local Player & Canvas state
+  const [localPos, setLocalPos] = useState({ x: 1800, y: 1350 });
+  const [activeTerminal, setActiveTerminal] = useState(null); // terminal opened in IDE modal
+  const [terminalCode, setTerminalCode] = useState('');
+  const [testResults, setTestResults] = useState(null);
+  const [isRunningTests, setIsRunningTests] = useState(false);
+  const [votedSuspect, setVotedSuspect] = useState(null);
+  const [chatInput, setChatInput] = useState('');
+  const [copiedRoom, setCopiedRoom] = useState(false);
+  const [nearbyAction, setNearbyAction] = useState(null);
+  const [isSoloMode, setIsSoloMode] = useState(false);
+
+  const startSoloSimulation = () => {
+    const heroObj = getHero(selectedHero);
+    setIsSoloMode(true);
+    setPhase('DAY');
+    setTimer(180);
+    setIsHost(true);
+    setMyRole('DEV');
+    setTotalTerminals(6);
+    setSolvedCount(0);
+    setTerminals(CLIENT_TERMINALS);
+    setLocalPos({ x: 1800, y: 1350 });
+    setPlayers([
+      {
+        id: 'local_player',
+        username: username.trim() || 'Tony_Stark',
+        color: heroObj.primaryColor,
+        visorColor: heroObj.visorColor,
+        operativeTitle: selectedTitle || heroObj.roleTitle,
+        characterId: selectedHero,
+        x: 1800,
+        y: 1350,
+        isMoving: false,
+        facingLeft: false,
+        role: 'DEV',
+        isAlive: true,
+        votedFor: null
+      },
+      {
+        id: 'bot_cap',
+        username: 'Steve_Rogers',
+        color: '#2563eb',
+        visorColor: '#ffffff',
+        operativeTitle: 'Tactical Vanguard',
+        characterId: 'cap',
+        x: 1720,
+        y: 1300,
+        isMoving: false,
+        facingLeft: false,
+        role: 'DEV',
+        isAlive: true,
+        votedFor: null
+      },
+      {
+        id: 'bot_thor',
+        username: 'Thor_Odinson',
+        color: '#38bdf8',
+        visorColor: '#60a5fa',
+        operativeTitle: 'God of Thunder',
+        characterId: 'thor',
+        x: 1880,
+        y: 1300,
+        isMoving: false,
+        facingLeft: true,
+        role: 'DEV',
+        isAlive: true,
+        votedFor: null
+      }
+    ]);
+    setChatMessages([
+      {
+        id: 'init_msg_1',
+        sender: 'DREADNOUGHT AI',
+        text: '🛸 SOLO SIMULATION ONLINE: All 6 sector engineering terminals active. Explore the dreadnought and fix subsystems!',
+        system: true
+      },
+      {
+        id: 'init_msg_2',
+        sender: 'Steve_Rogers',
+        color: '#2563eb',
+        text: 'I will monitor the Central Atrium. Stark, check the Bridge matrix rotation in Sector 1!',
+        system: false
+      }
+    ]);
+    setInRoom(true);
+  };
+
+  const canvasRef = useRef(null);
+  const keysPressed = useRef({});
+  const walkCycleRef = useRef(0);
+  const facingLeftRef = useRef(false);
+  const playersRef = useRef([]);
+  const chatBottomRef = useRef(null);
+  const lastMoveEmitTime = useRef(0);
+  const particlesRef = useRef([]);
+
+  // Sync players ref and playerSpeed ref for canvas loop
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  useEffect(() => {
+    playerSpeedRef.current = playerSpeed;
+  }, [playerSpeed]);
+
+  // Socket event listeners
+  useEffect(() => {
+    function onConnect() {
+      setConnected(true);
+    }
+    function onDisconnect() {
+      setConnected(false);
+    }
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    socket.on('room_update', (data) => {
+      setPhase((prevPhase) => {
+        // When transitioning from LOBBY to DAY, redirect player to their assigned main map coordinates
+        if (prevPhase === 'LOBBY' && data.phase === 'DAY') {
+          const self = (data.players || []).find((p) => p.id === socket.id);
+          if (self && self.x && self.y) {
+            setLocalPos({ x: self.x, y: self.y });
+          }
+        }
+        return data.phase;
+      });
+      setTimer(data.timer);
+      setHostId(data.hostId);
+      setIsHost(data.isHost);
+      setMyRole(data.myRole || 'DEV');
+      setFellowMafia(data.fellowMafia || []);
+      setPlayers(data.players || []);
+      setTerminals(data.terminals || []);
+      setSolvedCount(data.solvedCount || 0);
+      setTotalTerminals(data.totalTerminals || 6);
+      setImposterSetting(data.imposterSetting || 'auto');
+      setCalculatedImposters(data.calculatedImposters || 1);
+      setChatMessages(data.chatMessages || []);
+      setLastEjection(data.lastEjection);
+      setGameWinner(data.gameWinner);
+      setWinReason(data.winReason);
+      setEmergencyCaller(data.emergencyCaller);
+
+      if (data.playerSpeed) {
+        setPlayerSpeed(data.playerSpeed);
+        playerSpeedRef.current = data.playerSpeed;
+      }
+
+      if (data.lastEjection && data.lastEjection.ejected) {
+        setEliminationCutscene({
+          username: data.lastEjection.username,
+          characterId: data.lastEjection.characterId || 'ironman',
+          wasMafia: data.lastEjection.wasMafia,
+          message: data.lastEjection.message,
+          startTime: Date.now()
+        });
+      }
+
+      // Sync local player position if uninitialized
+      const self = data.players.find((p) => p.id === socket.id);
+      if (self && !keysPressed.current['w'] && !keysPressed.current['s'] && !keysPressed.current['a'] && !keysPressed.current['d']) {
+        // Sync gently without overriding active local user inputs
+      }
+    });
+
+    socket.on('timer_tick', ({ timer: newTimer }) => {
+      setTimer(newTimer);
+    });
+
+    socket.on('player_moved', ({ id, x, y, isMoving, facingLeft }) => {
+      setPlayers((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, x, y, isMoving, facingLeft } : p))
+      );
+    });
+
+    socket.on('terminal_test_results', (results) => {
+      setIsRunningTests(false);
+      setTestResults(results);
+    });
+
+    socket.on('chat_message', (msg) => {
+      setChatMessages((prev) => [...prev, msg]);
+      setTimeout(() => {
+        chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    });
+
+    socket.on('error_message', (msg) => {
+      alert(`[ERROR] ${msg}`);
+    });
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('room_update');
+      socket.off('timer_tick');
+      socket.off('player_moved');
+      socket.off('terminal_test_results');
+      socket.off('chat_message');
+      socket.off('error_message');
+    };
+  }, []);
+
+  // Keyboard Movement Listener (Enabled in LOBBY, DAY, and NIGHT)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't capture WASD if typing in input or editor
+      if (
+        e.target.tagName === 'INPUT' ||
+        e.target.tagName === 'TEXTAREA' ||
+        activeTerminal !== null
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'].includes(key)) {
+        keysPressed.current[key] = true;
+      }
+
+      // Proximity Action with [E]
+      if (key === 'e' && nearbyAction) {
+        if (nearbyAction.type === 'terminal') {
+          const term = terminals.find((t) => t.id === nearbyAction.id);
+          if (term) {
+            setActiveTerminal(term);
+            setTerminalCode(term.code || term.starterCode);
+            setTestResults(null);
+          }
+        } else if (nearbyAction.type === 'emergency') {
+          if (phase === 'DAY') {
+            socket.emit('call_emergency', { roomId });
+          }
+        } else if (nearbyAction.type === 'wardrobe') {
+          setShowWardrobe(true);
+        }
+      }
+
+      // Sabotage Action with [Q] (Mafia only in Night phase)
+      if (key === 'q' && myRole === 'MAFIA' && phase === 'NIGHT' && nearbyAction && nearbyAction.type === 'terminal') {
+        socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id });
+      }
+
+      // Toggle Mini-Map with [M]
+      if (key === 'm') {
+        setShowMiniMap((prev) => !prev);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      const key = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'].includes(key)) {
+        keysPressed.current[key] = false;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [activeTerminal, nearbyAction, terminals, myRole, phase, roomId]);
+
+  // =========================================================================
+  // HIGH-RESOLUTION PROCEDURAL VECTOR GRAPHICS & CANVAS ENGINE (60 FPS)
+  // =========================================================================
+  useEffect(() => {
+    let animationFrameId;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Resize canvas to responsive viewport (up to 960x640)
+    canvas.width = 960;
+    canvas.height = 640;
+
+    // Movement physics & collision boundaries (Balanced default 2.4, controlled by Admin)
+    const SPEED = playerSpeedRef.current || 2.4;
+
+    const render = () => {
+      // 1. Movement Calculations
+      let dx = 0;
+      let dy = 0;
+      const k = keysPressed.current;
+
+      if (k['w'] || k['arrowup']) dy -= 1;
+      if (k['s'] || k['arrowdown']) dy += 1;
+      if (k['a'] || k['arrowleft']) dx -= 1;
+      if (k['d'] || k['arrowright']) dx += 1;
+
+      const isMoving = (dx !== 0 || dy !== 0) && activeTerminal === null && phase !== 'VOTING' && phase !== 'GAME_OVER';
+
+      if (isMoving) {
+        if (dx < 0) facingLeftRef.current = true;
+        if (dx > 0) facingLeftRef.current = false;
+
+        // Normalize diagonal speed
+        if (dx !== 0 && dy !== 0) {
+          dx *= 0.7071;
+          dy *= 0.7071;
+        }
+
+        walkCycleRef.current += 0.22;
+
+        setLocalPos((prev) => {
+          let nextX = prev.x;
+          let nextY = prev.y;
+
+          const targetX = prev.x + dx * SPEED;
+          const targetY = prev.y + dy * SPEED;
+
+          if (isPositionWalkable(targetX, targetY, phase)) {
+            nextX = targetX;
+            nextY = targetY;
+          } else {
+            // Slide along X axis if possible
+            if (isPositionWalkable(targetX, prev.y, phase)) {
+              nextX = targetX;
+            }
+            // Slide along Y axis if possible
+            if (isPositionWalkable(prev.x, targetY, phase)) {
+              nextY = targetY;
+            }
+          }
+
+          // Throttle socket move emit to 30Hz
+          const now = Date.now();
+          if (now - lastMoveEmitTime.current > 33) {
+            lastMoveEmitTime.current = now;
+            socket.emit('player_move', {
+              roomId,
+              x: Math.round(nextX),
+              y: Math.round(nextY),
+              isMoving: true,
+              facingLeft: facingLeftRef.current
+            });
+          }
+
+          return { x: nextX, y: nextY };
+        });
+      } else if (lastMoveEmitTime.current !== 0) {
+        // Broadcast stop state once
+        lastMoveEmitTime.current = 0;
+        socket.emit('player_move', {
+          roomId,
+          x: Math.round(localPos.x),
+          y: Math.round(localPos.y),
+          isMoving: false,
+          facingLeft: facingLeftRef.current
+        });
+      }
+
+      // 2. Camera Viewport Tracking (Centered on local player, clamped to map)
+      const cameraX = Math.max(0, Math.min(MAP_WIDTH - canvas.width, localPos.x - canvas.width / 2));
+      const cameraY = Math.max(0, Math.min(MAP_HEIGHT - canvas.height, localPos.y - canvas.height / 2));
+
+      // 3. Render Deep Space Background
+      // Multi-layer nebula background
+      const bgGrad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+      bgGrad.addColorStop(0, '#040a18');
+      bgGrad.addColorStop(0.5, '#030810');
+      bgGrad.addColorStop(1, '#020508');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-cameraX, -cameraY);
+
+      // Nebula clouds (large atmospheric blobs)
+      const nebulaPositions = [
+        { x: 900, y: 600, r: 400, c1: 'rgba(6,182,212,0.04)', c2: 'rgba(0,0,0,0)' },
+        { x: 2700, y: 400, r: 350, c1: 'rgba(245,158,11,0.04)', c2: 'rgba(0,0,0,0)' },
+        { x: 1800, y: 2100, r: 500, c1: 'rgba(139,92,246,0.05)', c2: 'rgba(0,0,0,0)' },
+        { x: 3200, y: 1500, r: 320, c1: 'rgba(16,185,129,0.04)', c2: 'rgba(0,0,0,0)' },
+        { x: 400, y: 1800, r: 380, c1: 'rgba(239,68,68,0.03)', c2: 'rgba(0,0,0,0)' },
+      ];
+      nebulaPositions.forEach(n => {
+        const ng = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+        ng.addColorStop(0, n.c1); ng.addColorStop(1, n.c2);
+        ctx.fillStyle = ng;
+        ctx.fillRect(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2);
+      });
+
+      // Layered starfield: 500+ stars with twinkling
+      for (let i = 0; i < 500; i++) {
+        const starX = (i * 137.508 + 23) % MAP_WIDTH;
+        const starY = (i * 97.319 + 11) % MAP_HEIGHT;
+        const twinkle = 0.3 + Math.sin(time * 2 + i * 0.7) * 0.35 + 0.35;
+        const starSize = i % 20 === 0 ? 3 : i % 5 === 0 ? 2 : i % 2 === 0 ? 1.5 : 1;
+        const hue = i % 10 === 0 ? 190 : i % 7 === 0 ? 60 : 0;
+        ctx.fillStyle = `hsla(${hue}, 40%, 90%, ${twinkle * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(starX, starY, starSize * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Bright star cross-glint
+        if (i % 20 === 0) {
+          ctx.strokeStyle = `rgba(255,255,255,${twinkle * 0.5})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(starX - 6, starY); ctx.lineTo(starX + 6, starY);
+          ctx.moveTo(starX, starY - 6); ctx.lineTo(starX, starY + 6);
+          ctx.stroke();
+        }
+      }
+
+      // =======================================================================
+      // DRAW EXPANDED 3600 x 2700 DREADNOUGHT MEGASTRUCTURE SECTORS & PROPS
+      // =======================================================================
+      const time = Date.now() / 1000;
+
+      // -----------------------------------------------------------------------
+      // OUTER DREADNOUGHT HULL ARMOR (multi-layer with beveled edges)
+      // -----------------------------------------------------------------------
+      // Outer hull shadow
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 40;
+      ctx.fillStyle = '#04080f';
+      ctx.strokeStyle = '#0f1f3a';
+      ctx.lineWidth = 24;
+      ctx.beginPath();
+      ctx.roundRect(80, 80, MAP_WIDTH - 160, MAP_HEIGHT - 160, 20);
+      ctx.stroke();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Hull inner bevel line
+      ctx.strokeStyle = 'rgba(6,182,212,0.08)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(96, 96, MAP_WIDTH - 192, MAP_HEIGHT - 192, 16);
+      ctx.stroke();
+
+      // Corner reinforcement plates
+      const cornerColor = '#0f1f3a';
+      for (const [cx2, cy2, sx, sy] of [
+        [80, 80, 1, 1], [MAP_WIDTH-80, 80, -1, 1],
+        [80, MAP_HEIGHT-80, 1, -1], [MAP_WIDTH-80, MAP_HEIGHT-80, -1, -1]
+      ]) {
+        ctx.fillStyle = cornerColor;
+        ctx.beginPath();
+        ctx.moveTo(cx2, cy2);
+        ctx.lineTo(cx2 + sx * 120, cy2);
+        ctx.lineTo(cx2, cy2 + sy * 120);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(6,182,212,0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // -----------------------------------------------------------------------
+      // TACTICAL CORRIDORS with gradient floors and chevron markings
+      // -----------------------------------------------------------------------
+      const corridors = [
+        { x: 1720, y: 760,  w: 160, h: 320, dir: 'v' },
+        { x: 1720, y: 1620, w: 160, h: 320, dir: 'v' },
+        { x: 960,  y: 1320, w: 420, h: 160, dir: 'h' },
+        { x: 2220, y: 1320, w: 420, h: 160, dir: 'h' },
+        { x: 1010, y: 560,  w: 370, h: 160, dir: 'h' },
+        { x: 2220, y: 560,  w: 370, h: 160, dir: 'h' },
+        { x: 580,  y: 810,  w: 140, h: 330, dir: 'v' },
+        { x: 2880, y: 810,  w: 140, h: 330, dir: 'v' },
+      ];
+      corridors.forEach(({ x, y, w, h, dir }) => {
+        // Floor gradient
+        const cg = ctx.createLinearGradient(x, y, dir === 'h' ? x + w : x, dir === 'v' ? y + h : y);
+        cg.addColorStop(0,   '#081323');
+        cg.addColorStop(0.5, '#0d1f38');
+        cg.addColorStop(1,   '#081323');
+        ctx.fillStyle = cg;
+        ctx.fillRect(x, y, w, h);
+        // Border
+        ctx.strokeStyle = 'rgba(51,65,85,0.7)';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(x, y, w, h);
+        // Center line stripe
+        ctx.strokeStyle = 'rgba(6,182,212,0.1)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([12, 8]);
+        ctx.beginPath();
+        if (dir === 'h') {
+          ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2);
+        } else {
+          ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+
+      // Floor Chevron Directional Markings
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+      ctx.lineWidth = 2;
+      for (let cy2 = 800; cy2 < 1040; cy2 += 36) {
+        ctx.beginPath();
+        ctx.moveTo(1778, cy2); ctx.lineTo(1800, cy2 - 14); ctx.lineTo(1822, cy2);
+        ctx.stroke();
+      }
+      for (let cy2 = 1680; cy2 < 1900; cy2 += 36) {
+        ctx.beginPath();
+        ctx.moveTo(1778, cy2); ctx.lineTo(1800, cy2 + 14); ctx.lineTo(1822, cy2);
+        ctx.stroke();
+      }
+
+      // =======================================================================
+      // SECTOR 1: COMMAND BRIDGE (North: 1340-2260, y: 180-800)
+      // =======================================================================
+      const bridgeGrad = ctx.createLinearGradient(1340, 180, 2260, 800);
+      bridgeGrad.addColorStop(0, '#060f22');
+      bridgeGrad.addColorStop(0.5, '#0d1f3c');
+      bridgeGrad.addColorStop(1, '#060f22');
+      ctx.fillStyle = bridgeGrad;
+      ctx.fillRect(1340, 180, 920, 620);
+      // Glowing cyan border
+      ctx.save();
+      ctx.shadowColor = '#06b6d4'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = '#0891b2'; ctx.lineWidth = 8;
+      ctx.strokeRect(1340, 180, 920, 620);
+      ctx.strokeStyle = 'rgba(6,182,212,0.3)'; ctx.lineWidth = 2;
+      ctx.strokeRect(1346, 186, 908, 608);
+      ctx.restore();
+
+      // Floor grid pattern
+      ctx.strokeStyle = 'rgba(6,182,212,0.06)';
+      ctx.lineWidth = 1;
+      for (let gx = 1380; gx < 2260; gx += 60) {
+        ctx.beginPath(); ctx.moveTo(gx, 180); ctx.lineTo(gx, 800); ctx.stroke();
+      }
+      for (let gy = 220; gy < 800; gy += 60) {
+        ctx.beginPath(); ctx.moveTo(1340, gy); ctx.lineTo(2260, gy); ctx.stroke();
+      }
+
+      // Panoramic Forward Viewport
+      const viewGrad = ctx.createLinearGradient(1440, 190, 1440, 246);
+      viewGrad.addColorStop(0, '#030c1f'); viewGrad.addColorStop(1, '#020812');
+      ctx.fillStyle = viewGrad;
+      ctx.fillRect(1440, 190, 720, 56);
+      ctx.save();
+      ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+      ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 2;
+      ctx.strokeRect(1440, 190, 720, 56);
+      // Stars in viewport
+      for (let vi = 0; vi < 30; vi++) {
+        const vx = 1448 + (vi * 137) % 704;
+        const vy = 198 + (vi * 53) % 38;
+        const va = 0.3 + Math.sin(time + vi) * 0.3;
+        ctx.fillStyle = `rgba(255,255,255,${va})`;
+        ctx.fillRect(vx, vy, vi % 3 === 0 ? 2 : 1, vi % 3 === 0 ? 2 : 1);
+      }
+      ctx.fillStyle = '#22d3ee';
+      ctx.font = "bold 10px 'Orbitron', 'JetBrains Mono', monospace";
+      ctx.textAlign = 'center';
+      ctx.fillText('◈ FORWARD TACTICAL VIEWPORT // DEEP SPACE SECTOR OMEGA ◈', 1800, 223);
+      ctx.restore();
+
+      // Holographic Star-Chart Projector at (1800, 400)
+      ctx.save();
+      ctx.translate(1800, 400);
+      // Platform
+      const platGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 58);
+      platGrad.addColorStop(0, '#1a2840'); platGrad.addColorStop(1, '#0a1525');
+      ctx.beginPath(); ctx.arc(0, 0, 58, 0, Math.PI * 2);
+      ctx.fillStyle = platGrad; ctx.fill();
+      ctx.shadowColor = '#06b6d4'; ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 4;
+      ctx.stroke(); ctx.shadowBlur = 0;
+
+      // Rotating hologram globe
+      ctx.strokeStyle = 'rgba(6,182,212,0.9)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 38, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(6,182,212,0.6)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 38, Math.abs(Math.cos(time)) * 38, time, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, Math.abs(Math.sin(time)) * 38, 38, -time, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(6,182,212,0.35)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 38, 12, time * 0.5, 0, Math.PI * 2); ctx.stroke();
+
+      // Orbiting data glints
+      for (let oi = 0; oi < 3; oi++) {
+        const oa = time * 2 + (oi / 3) * Math.PI * 2;
+        const or2 = 44 + oi * 4;
+        ctx.save();
+        ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 8;
+        ctx.fillStyle = oi === 0 ? '#38bdf8' : oi === 1 ? '#f59e0b' : '#a78bfa';
+        ctx.beginPath(); ctx.arc(Math.cos(oa) * or2, Math.sin(oa) * or2, oi === 0 ? 5 : 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // =======================================================================
+      // SECTOR 2: AI & QUANTUM MAINFRAME (North-West: x: 250-1050, y: 200-850)
+      // =======================================================================
+      const mainframeGrad = ctx.createLinearGradient(250, 200, 1050, 850);
+      mainframeGrad.addColorStop(0, '#06020e'); mainframeGrad.addColorStop(0.5, '#0d0a1e'); mainframeGrad.addColorStop(1, '#06020e');
+      ctx.fillStyle = mainframeGrad;
+      ctx.fillRect(250, 200, 800, 650);
+      ctx.save();
+      ctx.shadowColor = '#6366f1'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 8;
+      ctx.strokeRect(250, 200, 800, 650);
+      ctx.strokeStyle = 'rgba(99,102,241,0.25)'; ctx.lineWidth = 2;
+      ctx.strokeRect(256, 206, 788, 638);
+      ctx.restore();
+
+      // Floor grid (indigo)
+      ctx.strokeStyle = 'rgba(99,102,241,0.06)'; ctx.lineWidth = 1;
+      for (let gx = 290; gx < 1050; gx += 55) {
+        ctx.beginPath(); ctx.moveTo(gx, 200); ctx.lineTo(gx, 850); ctx.stroke();
+      }
+
+      // Server racks with blinking LEDs
+      for (let r = 0; r < 4; r++) {
+        const sx = 310 + r * 120;
+        const rackGrad = ctx.createLinearGradient(sx, 270, sx + 70, 270);
+        rackGrad.addColorStop(0, '#16102a'); rackGrad.addColorStop(1, '#1e1636');
+        ctx.fillStyle = rackGrad;
+        ctx.fillRect(sx, 270, 70, 380);
+        ctx.save();
+        ctx.shadowColor = '#4f46e5'; ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 2;
+        ctx.strokeRect(sx, 270, 70, 380);
+        ctx.restore();
+        for (let b = 0; b < 9; b++) {
+          const isBlink = Math.sin(time * 5 + r * 2 + b) > 0;
+          ctx.save();
+          ctx.shadowColor = isBlink ? '#10b981' : '#4f46e5'; ctx.shadowBlur = 6;
+          ctx.fillStyle = isBlink ? '#10b981' : '#1e1b4b';
+          ctx.fillRect(sx + 10, 292 + b * 39, 16, 11);
+          ctx.fillStyle = !isBlink ? '#38bdf8' : '#1e1b4b';
+          ctx.fillRect(sx + 40, 292 + b * 39, 16, 11);
+          ctx.restore();
+        }
+      }
+
+      // Quantum cooling fan terminal at (650, 500)
+      ctx.save();
+      ctx.translate(650, 500);
+      const fanPlatGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 54);
+      fanPlatGrad.addColorStop(0, '#18104a'); fanPlatGrad.addColorStop(1, '#0a0720');
+      ctx.beginPath(); ctx.arc(0, 0, 54, 0, Math.PI * 2);
+      ctx.fillStyle = fanPlatGrad; ctx.fill();
+      ctx.shadowColor = '#6366f1'; ctx.shadowBlur = 18;
+      ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.shadowBlur = 0;
+      for (let f = 0; f < 4; f++) {
+        const ba = time * 6 + (f * Math.PI) / 2;
+        const bladeGrad = ctx.createRadialGradient(Math.cos(ba) * 26, Math.sin(ba) * 26, 0, Math.cos(ba) * 26, Math.sin(ba) * 26, 14);
+        bladeGrad.addColorStop(0, '#6366f1'); bladeGrad.addColorStop(1, '#312e81');
+        ctx.fillStyle = bladeGrad;
+        ctx.beginPath(); ctx.arc(Math.cos(ba) * 26, Math.sin(ba) * 26, 13, 0, Math.PI * 2); ctx.fill();
+      }
+      // Central spindle
+      ctx.fillStyle = '#818cf8'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // =======================================================================
+      // SECTOR 3: COMMUNICATIONS & SENSOR ARRAY (North-East: x: 2550-3350, y: 200-850)
+      // =======================================================================
+      const sensorGrad = ctx.createLinearGradient(2550, 200, 3350, 850);
+      sensorGrad.addColorStop(0, '#100c02'); sensorGrad.addColorStop(0.5, '#1a1505'); sensorGrad.addColorStop(1, '#100c02');
+      ctx.fillStyle = sensorGrad;
+      ctx.fillRect(2550, 200, 800, 650);
+      ctx.save();
+      ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = '#d97706'; ctx.lineWidth = 8;
+      ctx.strokeRect(2550, 200, 800, 650);
+      ctx.strokeStyle = 'rgba(245,158,11,0.25)'; ctx.lineWidth = 2;
+      ctx.strokeRect(2556, 206, 788, 638);
+      ctx.restore();
+
+      // Floor grid (amber)
+      ctx.strokeStyle = 'rgba(245,158,11,0.06)'; ctx.lineWidth = 1;
+      for (let gx = 2590; gx < 3350; gx += 55) {
+        ctx.beginPath(); ctx.moveTo(gx, 200); ctx.lineTo(gx, 850); ctx.stroke();
+      }
+
+      // Rotating Radar Dish at (2950, 500)
+      ctx.save();
+      ctx.translate(2950, 500);
+      const radarPlatGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 58);
+      radarPlatGrad.addColorStop(0, '#1f1700'); radarPlatGrad.addColorStop(1, '#0d0c02');
+      ctx.beginPath(); ctx.arc(0, 0, 58, 0, Math.PI * 2);
+      ctx.fillStyle = radarPlatGrad; ctx.fill();
+      ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      const sweepAngle = time * 2.2;
+      // Radar sweep fade trail
+      const trailCount = 8;
+      for (let ti = 0; ti < trailCount; ti++) {
+        const ta = sweepAngle - (ti / trailCount) * 0.8;
+        ctx.strokeStyle = `rgba(245,158,11,${(1 - ti / trailCount) * 0.5})`;
+        ctx.lineWidth = 3 - ti * 0.3;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ta) * 52, Math.sin(ta) * 52); ctx.stroke();
+      }
+      // Range rings
+      for (const [rr, alpha] of [[20, 0.3], [38, 0.25], [52, 0.2]]) {
+        ctx.strokeStyle = `rgba(245,158,11,${alpha})`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(0, 0, rr, 0, Math.PI * 2); ctx.stroke();
+      }
+      // Blip dots
+      ctx.save(); ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(30, -18, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-22, 34, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.restore();
+
+      // =======================================================================
+      // SECTOR 4: SECURITY & SURVEILLANCE VAULT (West: x: 200-1000, y: 1100-1850)
+      // =======================================================================
+      const vaultGrad = ctx.createLinearGradient(200, 1100, 1000, 1850);
+      vaultGrad.addColorStop(0, '#110407'); vaultGrad.addColorStop(0.5, '#1c0b0b'); vaultGrad.addColorStop(1, '#110407');
+      ctx.fillStyle = vaultGrad;
+      ctx.fillRect(200, 1100, 800, 750);
+      ctx.save();
+      ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 8;
+      ctx.strokeRect(200, 1100, 800, 750);
+      ctx.strokeStyle = 'rgba(239,68,68,0.25)'; ctx.lineWidth = 2;
+      ctx.strokeRect(206, 1106, 788, 738);
+      ctx.restore();
+
+      // Camera grid overlay
+      ctx.strokeStyle = 'rgba(239,68,68,0.06)'; ctx.lineWidth = 1;
+      for (let gx = 240; gx < 1000; gx += 60) {
+        ctx.beginPath(); ctx.moveTo(gx, 1100); ctx.lineTo(gx, 1850); ctx.stroke();
+      }
+
+      // Security cam icons (wall)
+      for (let ci = 0; ci < 3; ci++) {
+        const camX = 280 + ci * 220;
+        ctx.save();
+        ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 8;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(camX, 1130, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 1.5;
+        const blinkAlpha = Math.sin(time * 3 + ci * 1.5) > 0 ? 1 : 0.2;
+        ctx.globalAlpha = blinkAlpha;
+        ctx.beginPath(); ctx.arc(camX, 1130, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // Security surveillance terminal at (550, 1450)
+      ctx.save();
+      ctx.translate(550, 1450);
+      const vaultPlatGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
+      vaultPlatGrad.addColorStop(0, '#2a0a0a'); vaultPlatGrad.addColorStop(1, '#0f0203');
+      ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.fillStyle = vaultPlatGrad; ctx.fill();
+      ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 22;
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke();
+      // Pulsing eye
+      const eyePulse = Math.abs(Math.sin(time * 2)) * 12 + 5;
+      ctx.save(); ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 14;
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(Math.cos(time * 2.5) * 10, Math.sin(time * 2.5) * 10, eyePulse, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.restore();
+
+      // =======================================================================
+      // SECTOR 5: CYBERNETICS & BIO-LAB (East: x: 2600-3400, y: 1100-1850)
+      // =======================================================================
+      const bioGrad = ctx.createLinearGradient(2600, 1100, 3400, 1850);
+      bioGrad.addColorStop(0, '#020e0b'); bioGrad.addColorStop(0.5, '#051a12'); bioGrad.addColorStop(1, '#020e0b');
+      ctx.fillStyle = bioGrad;
+      ctx.fillRect(2600, 1100, 800, 750);
+      ctx.save();
+      ctx.shadowColor = '#10b981'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = '#059669'; ctx.lineWidth = 8;
+      ctx.strokeRect(2600, 1100, 800, 750);
+      ctx.strokeStyle = 'rgba(16,185,129,0.25)'; ctx.lineWidth = 2;
+      ctx.strokeRect(2606, 1106, 788, 738);
+      ctx.restore();
+
+      // Bio floor grid
+      ctx.strokeStyle = 'rgba(16,185,129,0.06)'; ctx.lineWidth = 1;
+      for (let gx = 2640; gx < 3400; gx += 60) {
+        ctx.beginPath(); ctx.moveTo(gx, 1100); ctx.lineTo(gx, 1850); ctx.stroke();
+      }
+
+      // DNA Double-Helix Hologram at (3050, 1450)
+      ctx.save();
+      ctx.translate(3050, 1450);
+      const bioPlat = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
+      bioPlat.addColorStop(0, '#032c20'); bioPlat.addColorStop(1, '#010d09');
+      ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.fillStyle = bioPlat; ctx.fill();
+      ctx.shadowColor = '#10b981'; ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Animated DNA strands
+      for (let d = -36; d <= 36; d += 10) {
+        const p = time * 3 + d * 0.12;
+        const ox = Math.sin(p) * 18;
+        ctx.save();
+        ctx.shadowColor = '#34d399'; ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(d, -ox); ctx.lineTo(d, ox); ctx.stroke();
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath(); ctx.arc(d, -ox, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6ee7b7';
+        ctx.beginPath(); ctx.arc(d, ox, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      // Connecting rungs
+      ctx.strokeStyle = 'rgba(52,211,153,0.4)'; ctx.lineWidth = 1;
+      for (let d = -36; d <= 36; d += 10) {
+        const p = time * 3 + d * 0.12;
+        const ox = Math.sin(p) * 18;
+        ctx.beginPath(); ctx.moveTo(d - 5, -ox); ctx.lineTo(d + 5, ox); ctx.stroke();
+      }
+      ctx.restore();
+
+      // =======================================================================
+      // SECTOR 6: QUANTUM HYPER-REACTOR CORE (South: x: 1340-2260, y: 1900-2550)
+      // =======================================================================
+      const reactorGrad = ctx.createLinearGradient(1340, 1900, 2260, 2550);
+      reactorGrad.addColorStop(0, '#0a0314'); reactorGrad.addColorStop(0.5, '#14062a'); reactorGrad.addColorStop(1, '#0a0314');
+      ctx.fillStyle = reactorGrad;
+      ctx.fillRect(1340, 1900, 920, 650);
+      ctx.save();
+      ctx.shadowColor = '#8b5cf6'; ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 8;
+      ctx.strokeRect(1340, 1900, 920, 650);
+      ctx.strokeStyle = 'rgba(139,92,246,0.3)'; ctx.lineWidth = 2;
+      ctx.strokeRect(1346, 1906, 908, 638);
+      ctx.restore();
+
+      // Reactor floor grid
+      ctx.strokeStyle = 'rgba(139,92,246,0.07)'; ctx.lineWidth = 1;
+      for (let gx = 1380; gx < 2260; gx += 60) {
+        ctx.beginPath(); ctx.moveTo(gx, 1900); ctx.lineTo(gx, 2550); ctx.stroke();
+      }
+      for (let gy = 1940; gy < 2550; gy += 60) {
+        ctx.beginPath(); ctx.moveTo(1340, gy); ctx.lineTo(2260, gy); ctx.stroke();
+      }
+
+      // Plasma Reactor Core at (1800, 2250)
+      ctx.save();
+      ctx.translate(1800, 2250);
+      const reactorCoreGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 82);
+      reactorCoreGrad.addColorStop(0, '#1a0838'); reactorCoreGrad.addColorStop(1, '#07021a');
+      ctx.beginPath(); ctx.arc(0, 0, 82, 0, Math.PI * 2);
+      ctx.fillStyle = reactorCoreGrad; ctx.fill();
+      ctx.shadowColor = '#8b5cf6'; ctx.shadowBlur = 30;
+      ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 5; ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Counter-rotating magnetic containment rings
+      ctx.save();
+      ctx.shadowColor = '#a855f7'; ctx.shadowBlur = 12;
+      ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.ellipse(0, 0, 63, 28, time * 1.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#c084fc';
+      ctx.beginPath(); ctx.ellipse(0, 0, 63, 28, -time * 1.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(192,132,252,0.5)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 48, 20, time * 0.7, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+
+      // Pulsing plasma sphere
+      const plasmaPulse = Math.sin(time * 4) * 7;
+      const plasmaGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 36 + plasmaPulse);
+      plasmaGrad.addColorStop(0, '#ffffff');
+      plasmaGrad.addColorStop(0.3, '#e9d5ff');
+      plasmaGrad.addColorStop(0.65, '#8b5cf6');
+      plasmaGrad.addColorStop(1, 'rgba(139,92,246,0)');
+      ctx.fillStyle = plasmaGrad;
+      ctx.save(); ctx.shadowColor = '#a855f7'; ctx.shadowBlur = 25;
+      ctx.beginPath(); ctx.arc(0, 0, 36 + plasmaPulse, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.restore();
+
+      // =======================================================================
+      // CENTRAL HUB: GRAND ASSEMBLY ATRIUM & COMMAND DECK (x: 1340-2260, y: 1040-1660)
+      // =======================================================================
+      const atriumGrad = ctx.createLinearGradient(1340, 1040, 2260, 1660);
+      atriumGrad.addColorStop(0, '#050e1e');
+      atriumGrad.addColorStop(0.5, '#0c1a32');
+      atriumGrad.addColorStop(1, '#050e1e');
+      ctx.fillStyle = atriumGrad;
+      ctx.fillRect(1340, 1040, 920, 620);
+      ctx.strokeStyle = 'rgba(71,85,105,0.6)'; ctx.lineWidth = 8;
+      ctx.strokeRect(1340, 1040, 920, 620);
+      // Secondary bevel
+      ctx.strokeStyle = 'rgba(100,116,139,0.18)'; ctx.lineWidth = 2;
+      ctx.strokeRect(1346, 1046, 908, 608);
+
+      // Atrium floor radial lines
+      ctx.save();
+      for (let ri = 0; ri < 12; ri++) {
+        const ra = (ri / 12) * Math.PI * 2;
+        ctx.strokeStyle = `rgba(6,182,212,${0.04 + (ri % 2) * 0.02})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(1800, 1350); ctx.lineTo(1800 + Math.cos(ra) * 380, 1350 + Math.sin(ra) * 280); ctx.stroke();
+      }
+      ctx.restore();
+
+      // Emergency Standup Beacon at (1800, 1350)
+      ctx.save();
+      ctx.translate(1800, 1350);
+      const beaconPlatGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 68);
+      beaconPlatGrad.addColorStop(0, '#1a2840'); beaconPlatGrad.addColorStop(1, '#080d18');
+      ctx.beginPath(); ctx.arc(0, 0, 68, 0, Math.PI * 2);
+      ctx.fillStyle = beaconPlatGrad; ctx.fill();
+      ctx.shadowColor = '#475569'; ctx.shadowBlur = 14;
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      const pulseEmergency = Math.sin(time * 4) * 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 26 + pulseEmergency, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, 26, 0, Math.PI * 2);
+      ctx.fillStyle = '#dc2626';
+      ctx.fill();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.font = "bold 9px 'JetBrains Mono', monospace";
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText('STANDUP', 0, 4);
+      ctx.restore();
+
+      // Decontamination Wardrobe Pod at (1550, 1150)
+      ctx.save();
+      ctx.translate(1550, 1150);
+      ctx.fillStyle = '#1e1b4b';
+      ctx.fillRect(-38, -48, 76, 96);
+      ctx.strokeStyle = '#818cf8';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-38, -48, 76, 96);
+
+      const scanY = Math.sin(time * 3) * 38;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-32, scanY);
+      ctx.lineTo(32, scanY);
+      ctx.stroke();
+
+      ctx.font = "bold 9px 'JetBrains Mono', monospace";
+      ctx.fillStyle = '#c7d2fe';
+      ctx.textAlign = 'center';
+      ctx.fillText('WARDROBE', 0, 62);
+      ctx.restore();
+
+      // =======================================================================
+      // SPECIFIC BARRIERS: LOBBY LOCKDOWN FORCEFIELDS vs ACTIVE GAME CLEARANCE
+      // =======================================================================
+      if (phase === 'LOBBY') {
+        // Glowing Red Laser Forcefield Barriers across all 4 exits of the Lobby:
+        const drawLaserBarrier = (x1, y1, x2, y2, label, isHorizontal) => {
+          ctx.save();
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 7;
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 16;
+          const flicker = Math.sin(time * 18 + x1) * 2;
+          ctx.beginPath();
+          if (isHorizontal) {
+            ctx.moveTo(x1, y1 + flicker);
+            ctx.lineTo(x2, y2 - flicker);
+          } else {
+            ctx.moveTo(x1 + flicker, y1);
+            ctx.lineTo(x2 - flicker, y2);
+          }
+          ctx.stroke();
+
+          // Laser grid ribs
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+          ctx.lineWidth = 2;
+          if (isHorizontal) {
+            for (let lx = x1 + 10; lx < x2; lx += 18) {
+              ctx.beginPath();
+              ctx.moveTo(lx, y1 - 18);
+              ctx.lineTo(lx, y1 + 18);
+              ctx.stroke();
+            }
+          } else {
+            for (let ly = y1 + 10; ly < y2; ly += 18) {
+              ctx.beginPath();
+              ctx.moveTo(x1 - 18, ly);
+              ctx.lineTo(x1 + 18, ly);
+              ctx.stroke();
+            }
+          }
+
+          ctx.font = "bold 9px 'JetBrains Mono', monospace";
+          ctx.fillStyle = '#fca5a5';
+          ctx.textAlign = 'center';
+          ctx.fillText(label, (x1 + x2) / 2, (y1 + y2) / 2 - (isHorizontal ? 22 : 0));
+          ctx.restore();
+        };
+
+        // North Exit (to Bridge)
+        drawLaserBarrier(1720, 1040, 1880, 1040, '🔒 FORCEFIELD // LOBBY LOCKED', true);
+        // South Exit (to Reactor)
+        drawLaserBarrier(1720, 1660, 1880, 1660, '🔒 FORCEFIELD // LOBBY LOCKED', true);
+        // West Exit (to Vault)
+        drawLaserBarrier(1340, 1320, 1340, 1480, '🔒 LOCKED', false);
+        // East Exit (to Bio-Lab)
+        drawLaserBarrier(2260, 1320, 2260, 1480, '🔒 LOCKED', false);
+      } else {
+        // In Game: Green Clearance Lights across open doorways
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(1720, 1036, 160, 8);
+        ctx.fillRect(1720, 1656, 160, 8);
+        ctx.fillRect(1336, 1320, 8, 160);
+        ctx.fillRect(2256, 1320, 8, 160);
+      }
+
+      // Room Name Banners across Sectors
+      ctx.font = "bold 15px 'JetBrains Mono', monospace";
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
+      ctx.textAlign = 'center';
+      ctx.fillText('COMMAND BRIDGE [SECTOR 1]', 1800, 270);
+      ctx.fillText('AI & QUANTUM MAINFRAME [SECTOR 2]', 650, 250);
+      ctx.fillText('COMMUNICATIONS & SENSORS [SECTOR 3]', 2950, 250);
+      ctx.fillText('SECURITY & SURVEILLANCE VAULT [SECTOR 4]', 600, 1160);
+      ctx.fillText('CYBERNETICS & BIO-LAB [SECTOR 5]', 3000, 1160);
+      ctx.fillText('QUANTUM HYPER-REACTOR CORE [SECTOR 6]', 1800, 1960);
+      ctx.fillText('CENTRAL ASSEMBLY ATRIUM (WAITING DECK)', 1800, 1090);
+
+      // =======================================================================
+      // DRAW 6 ACTIVE TERMINAL STATUS BLIPS
+      // =======================================================================
+      terminals.forEach((term) => {
+        const isNearby = Math.hypot(localPos.x - term.x, localPos.y - term.y) < 75;
+        const color = term.solved ? '#10b981' : (term.sabotaged ? '#ef4444' : '#f59e0b');
+
+        // Glowing interactive aura
+        ctx.beginPath();
+        ctx.arc(term.x, term.y, 45, 0, Math.PI * 2);
+        ctx.fillStyle = isNearby ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.04)';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isNearby ? 3 : 1.5;
+        ctx.stroke();
+
+        // Terminal Console Body
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(term.x - 22, term.y - 16, 44, 32);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(term.x - 22, term.y - 16, 44, 32);
+
+        // Terminal Screen
+        ctx.fillStyle = color;
+        ctx.font = "bold 8px 'JetBrains Mono', monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText(term.solved ? 'STABLE' : (term.sabotaged ? 'SABOTAGED' : 'DEBUG'), term.x, term.y + 3);
+      });
+
+      // =======================================================================
+      // DRAW AVENGERS HEROES & FALLEN HERO MEMORIAL RELICS
+      // =======================================================================
+      // Combine remote players and local player
+      const allRoster = [...playersRef.current];
+      const selfPlayer = allRoster.find((p) => p.id === socket.id);
+
+      if (!selfPlayer) {
+        const heroObj = getHero(selectedHero);
+        allRoster.push({
+          id: socket.id,
+          username,
+          characterId: selectedHero,
+          color: heroObj.primaryColor,
+          visorColor: heroObj.visorColor,
+          operativeTitle: selectedTitle || heroObj.roleTitle,
+          x: localPos.x,
+          y: localPos.y,
+          isMoving,
+          facingLeft: facingLeftRef.current,
+          role: myRole,
+          isAlive: true
+        });
+      }
+
+      // 1. Draw Fallen Hero Relics on the deck floor for any eliminated/dead players
+      allRoster.forEach((p) => {
+        if (!p.isAlive) {
+          drawFallenRelic(ctx, p.characterId || 'ironman', p.x, p.y, time);
+        }
+      });
+
+      // 2. Sort alive and ghost operatives by Y for depth layering
+      allRoster.sort((a, b) => a.y - b.y);
+
+      allRoster.forEach((p) => {
+        const isLocal = p.id === socket.id || p.id === 'local_player';
+        const px = isLocal ? localPos.x : p.x;
+        const py = isLocal ? localPos.y : p.y;
+        const isFacingLeft = isLocal ? facingLeftRef.current : p.facingLeft;
+        const isPlMoving = isLocal ? isMoving : p.isMoving;
+        const isGhost = !p.isAlive;
+        const pWalk = isPlMoving ? Math.sin(time * 12) * 4 : 0;
+        const heroObj = getHero(p.characterId || 'ironman');
+
+        ctx.save();
+        ctx.translate(px, py);
+
+        // Procedural vector render for this specific Avenger (Iron Man, Cap, Thor, Hulk, etc.)
+        drawAvenger(ctx, p.characterId || 'ironman', pWalk, time, isPlMoving, isFacingLeft, isGhost, isLocal);
+
+        ctx.restore();
+
+        // Nametag & Hero Specialization Title (Drawn without scale inversion)
+        ctx.font = "bold 10px 'JetBrains Mono', monospace";
+        ctx.textAlign = 'center';
+
+        const isMafiaTeammate = myRole === 'MAFIA' && (p.role === 'MAFIA' || fellowMafia.includes(p.username));
+        ctx.fillStyle = isGhost ? 'rgba(148, 163, 184, 0.7)' : (isMafiaTeammate ? '#ef4444' : '#f8fafc');
+        ctx.fillText((isGhost ? '👻 ' : '') + p.username + (isLocal ? ' (YOU)' : ''), px, py - (isGhost ? 52 : 44));
+
+        ctx.font = "8px 'JetBrains Mono', monospace";
+        ctx.fillStyle = isGhost ? 'rgba(56, 189, 248, 0.6)' : heroObj.primaryColor;
+        ctx.fillText(`[${heroObj.name} • ${p.operativeTitle || heroObj.roleTitle}]`, px, py - (isGhost ? 42 : 34));
+      });
+
+      // =======================================================================
+      // NIGHT PHASE: FLASHLIGHT FOG-OF-WAR (Developers) vs NIGHT VISION (Mafia)
+      // =======================================================================
+      if (phase === 'NIGHT') {
+        if (myRole === 'MAFIA') {
+          // Mafia: High-tech green night-vision HUD overlay
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+          ctx.fillRect(cameraX, cameraY, canvas.width, canvas.height);
+          // Scanlines
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
+          for (let y = 0; y < canvas.height; y += 4) {
+            ctx.fillRect(cameraX, cameraY + y, canvas.width, 2);
+          }
+        } else {
+          // Developers: Darkness mask with 135px circular vision cut-out
+          const maskCanvas = document.createElement('canvas');
+          maskCanvas.width = canvas.width;
+          maskCanvas.height = canvas.height;
+          const maskCtx = maskCanvas.getContext('2d');
+
+          maskCtx.fillStyle = 'rgba(3, 7, 18, 0.96)';
+          maskCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+          maskCtx.globalCompositeOperation = 'destination-out';
+          const screenX = localPos.x - cameraX;
+          const screenY = localPos.y - cameraY;
+
+          const flashlightGrad = maskCtx.createRadialGradient(screenX, screenY, 30, screenX, screenY, 140);
+          flashlightGrad.addColorStop(0, 'rgba(0,0,0,1)');
+          flashlightGrad.addColorStop(0.8, 'rgba(0,0,0,0.85)');
+          flashlightGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+          maskCtx.fillStyle = flashlightGrad;
+          maskCtx.beginPath();
+          maskCtx.arc(screenX, screenY, 140, 0, Math.PI * 2);
+          maskCtx.fill();
+
+          ctx.drawImage(maskCanvas, cameraX, cameraY);
+        }
+      }
+
+      ctx.restore(); // Restore camera translation
+
+      // =======================================================================
+      // PROXIMITY ACTION DETECTION (Within 70px)
+      // =======================================================================
+      let foundAction = null;
+
+      // Check Terminals
+      terminals.forEach((term) => {
+        const dist = Math.hypot(localPos.x - term.x, localPos.y - term.y);
+        if (dist < 70) {
+          foundAction = {
+            type: 'terminal',
+            id: term.id,
+            name: term.name,
+            solved: term.solved
+          };
+        }
+      });
+
+      // Check Emergency Beacon (1800, 1350)
+      if (!foundAction && Math.hypot(localPos.x - 1800, localPos.y - 1350) < 80) {
+        foundAction = {
+          type: 'emergency',
+          name: 'Central Lockdown Beacon'
+        };
+      }
+
+      // Check Wardrobe Pod (1550, 1150)
+      if (!foundAction && Math.hypot(localPos.x - 1550, localPos.y - 1150) < 80) {
+        foundAction = {
+          type: 'wardrobe',
+          name: 'Decontamination Wardrobe Pod'
+        };
+      }
+
+      setNearbyAction(foundAction);
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [localPos, terminals, myRole, phase, roomId, username, selectedColor, selectedVisor, selectedTitle, selectedHero, playerSpeed]);
+
+  // =========================================================================
+  // VIEW: AIRLOCK LOGIN (Entry / Server Config)
+  // =========================================================================
+  if (!inRoom) {
+    return (
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#05070d',
+          backgroundImage: 'radial-gradient(circle at 50% 30%, #1e1b4b 0%, #030712 100%)',
+          color: '#f8fafc',
+          fontFamily: "'JetBrains Mono', Consolas, monospace, sans-serif",
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          boxSizing: 'border-box'
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '24px', zIndex: 2 }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(56, 189, 248, 0.1)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#38bdf8',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              marginBottom: '14px',
+              boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)'
+            }}
+          >
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
+            2400x1800 DREADNOUGHT // MULTIPLAYER ARENA
+          </div>
+
+          <h1 style={{ fontSize: '46px', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+            <span style={{ color: '#38bdf8', textShadow: '0 0 20px rgba(56, 189, 248, 0.5)' }}>CODE</span>
+            <span style={{ color: '#ef4444', textShadow: '0 0 20px rgba(239, 68, 68, 0.6)' }}>MAFIA</span>
+          </h1>
+          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', maxWidth: '480px', lineHeight: '1.5' }}>
+            Explore the 8-room dreadnought, stabilize 6 real-world engineering terminals in Monaco IDE, survive the 30s blackout, and unmask the cyber infiltrators!
+          </p>
+        </div>
+
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '460px',
+            backgroundColor: 'rgba(15, 23, 42, 0.94)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid #334155',
+            borderRadius: '14px',
+            padding: '28px',
+            boxSizing: 'border-box',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15)',
+            zIndex: 2
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '14px', marginBottom: '18px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc', letterSpacing: '1px' }}>
+              SPACESHIP AIRLOCK REGISTRATION
+            </span>
+            <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 700 }}>2D CANVAS V2</span>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!roomId.trim() || !username.trim()) return;
+              if (!connected) {
+                setShowServerConfig(true);
+                alert("⚠️ Cannot Board: Game Server Offline!\n\nYour game frontend is running on Vercel, but it cannot connect to the backend WebSocket server.\n\n👉 Deploy your backend to Render.com and paste your Render URL into 'Server URL' below!");
+                return;
+              }
+              const heroObj = getHero(selectedHero);
+              socket.emit('join_room', {
+                roomId: roomId.trim(),
+                username: username.trim(),
+                color: heroObj.primaryColor,
+                visorColor: heroObj.visorColor,
+                operativeTitle: selectedTitle || heroObj.roleTitle,
+                characterId: selectedHero
+              });
+              setInRoom(true);
+            }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+          >
+            {/* Server Connection Status Banner */}
+            <div style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: connected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.15)',
+              border: connected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '11px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: connected ? '#10b981' : '#f87171', fontWeight: 700 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
+                  {connected ? 'GAME SERVER ONLINE' : 'GAME SERVER OFFLINE'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowServerConfig(!showServerConfig)}
+                  style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                >
+                  {showServerConfig ? 'Close' : '⚙️ Server URL'}
+                </button>
+              </div>
+              {!connected && !showServerConfig && (
+                <div style={{ color: '#cbd5e1', fontSize: '10px', lineHeight: '1.4' }}>
+                  Target: <span style={{ color: '#f87171', fontFamily: 'monospace' }}>{SERVER_URL || 'None'}</span>. Click <b style={{ color: '#38bdf8' }}>⚙️ Server URL</b> to enter your Render backend link.
+                </div>
+              )}
+              {showServerConfig && (
+                <div style={{ marginTop: '4px', display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    placeholder="https://your-server.onrender.com"
+                    value={serverUrlInput}
+                    onChange={(e) => setServerUrlInput(e.target.value)}
+                    style={{ flex: 1, padding: '6px 8px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!serverUrlInput.trim()) return;
+                      const formatted = serverUrlInput.trim().replace(/\/$/, '');
+                      localStorage.setItem('code_mafia_server_url', formatted);
+                      window.location.reload();
+                    }}
+                    style={{ padding: '6px 12px', backgroundColor: '#0284c7', border: 'none', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Connect
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Callsign */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>OPERATIVE CALLSIGN</label>
+                <button
+                  type="button"
+                  onClick={() => setUsername(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)])}
+                  style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                >
+                  <Dices size={12} /> Randomize
+                </button>
+              </div>
+              <input
+                type="text"
+                required
+                maxLength={18}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Select Avengers Hero */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+                  CHOOSE YOUR AVENGERS HERO
+                </label>
+                <span style={{ fontSize: '10px', color: selectedHeroObj.primaryColor, fontWeight: 700 }}>
+                  {selectedHeroObj.name} ({selectedHeroObj.alias})
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                {AVENGERS_HEROES.map((h) => {
+                  const isSel = selectedHero === h.id;
+                  return (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHero(h.id);
+                        setSelectedColor(h.primaryColor);
+                        setSelectedVisor(h.visorColor);
+                        setSelectedTitle(h.roleTitle);
+                        localStorage.setItem('code_mafia_hero', h.id);
+                      }}
+                      style={{
+                        padding: '8px 6px',
+                        borderRadius: '8px',
+                        backgroundColor: isSel ? 'rgba(30, 41, 59, 0.95)' : '#090d16',
+                        border: isSel ? `2px solid ${h.primaryColor}` : '1px solid #1e293b',
+                        boxShadow: isSel ? `0 0 12px ${h.glowColor}` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '3px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>{h.iconEmoji}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: isSel ? '#ffffff' : '#cbd5e1' }}>
+                        {h.name}
+                      </span>
+                      <span style={{ fontSize: '9px', color: h.primaryColor, fontWeight: 600 }}>
+                        {h.alias}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: '6px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>
+                "{selectedHeroObj.quote}"
+              </div>
+            </div>
+
+            {/* Room Code */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px' }}>
+                SPACESHIP SECTOR CODE
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={24}
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {connected ? (
+              <button
+                type="submit"
+                disabled={!roomId.trim() || !username.trim()}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  marginTop: '4px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  letterSpacing: '1px',
+                  fontFamily: 'inherit',
+                  cursor: (!roomId.trim() || !username.trim()) ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)'
+                }}
+              >
+                ENTER DREADNOUGHT WAITING DECK ➔
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={startSoloSimulation}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #7c3aed 100%)',
+                    border: '1px solid #38bdf8',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    letterSpacing: '1px',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 25px rgba(56, 189, 248, 0.45)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  🚀 LAUNCH SOLO SIMULATION (TEST GRAPHICS & SHIP) ➔
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowServerConfig(!showServerConfig)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    borderRadius: '8px',
+                    color: '#f87171',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <AlertTriangle size={14} /> BACKEND OFFLINE: CLICK TO CONFIGURE / DEPLOY
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW: MAIN 2D ARENA (Lobby, Day, Night, or Emergency)
+  // =========================================================================
+  return (
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#05070d',
+        color: '#f8fafc',
+        fontFamily: "'JetBrains Mono', Consolas, monospace, sans-serif",
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative'
+      }}
+    >
+      {/* Top Cyber Navigation Bar */}
+      <header
+        style={{
+          height: '56px',
+          backgroundColor: '#090d16',
+          borderBottom: '1px solid #1e293b',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 20px',
+          zIndex: 10
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 900, color: '#38bdf8' }}>CODE</span>
+            <span style={{ fontSize: '18px', fontWeight: 900, color: '#ef4444' }}>MAFIA</span>
+            <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>// DREADNOUGHT</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#0f172a', padding: '4px 10px', borderRadius: '6px', border: '1px solid #1e293b' }}>
+            <Radio size={14} color="#10b981" />
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>Sector:</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>{roomId}</span>
+          </div>
+
+          {/* Phase Badge */}
+          <div
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 800,
+              backgroundColor:
+                phase === 'LOBBY'
+                  ? '#1e293b'
+                  : phase === 'DAY'
+                  ? 'rgba(56, 189, 248, 0.2)'
+                  : phase === 'NIGHT'
+                  ? 'rgba(139, 92, 246, 0.25)'
+                  : 'rgba(239, 68, 68, 0.25)',
+              border:
+                phase === 'LOBBY'
+                  ? '1px solid #475569'
+                  : phase === 'DAY'
+                  ? '1px solid #38bdf8'
+                  : phase === 'NIGHT'
+                  ? '1px solid #a855f7'
+                  : '1px solid #ef4444',
+              color:
+                phase === 'LOBBY'
+                  ? '#cbd5e1'
+                  : phase === 'DAY'
+                  ? '#38bdf8'
+                  : phase === 'NIGHT'
+                  ? '#c084fc'
+                  : '#f87171',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {phase === 'LOBBY' && 'WAITING DECK'}
+            {phase === 'DAY' && 'DAY SPRINT // FULL SHIP POWER'}
+            {phase === 'NIGHT' && 'NIGHT BLACKOUT // 30s POWER FAILURE'}
+            {phase === 'VOTING' && 'EMERGENCY STANDUP LOCKDOWN'}
+            {phase === 'GAME_OVER' && 'MISSION DEBRIEF'}
+          </div>
+        </div>
+
+        {/* Center: Live Timer & Progress */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          {phase !== 'LOBBY' && phase !== 'GAME_OVER' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={16} color={timer < 15 ? '#ef4444' : '#38bdf8'} />
+              <span style={{ fontSize: '18px', fontWeight: 800, color: timer < 15 ? '#ef4444' : '#ffffff' }}>
+                {timer}s
+              </span>
+            </div>
+          )}
+
+          {/* Subsystems Integrity (Fixed / Total) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>INTEGRITY:</span>
+            <div style={{ width: '120px', height: '10px', backgroundColor: '#1e293b', borderRadius: '5px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${(solvedCount / totalTerminals) * 100}%`,
+                  height: '100%',
+                  backgroundColor: solvedCount === totalTerminals ? '#10b981' : '#38bdf8',
+                  transition: 'width 0.4s ease'
+                }}
+              />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>
+              {solvedCount}/{totalTerminals}
+            </span>
+          </div>
+        </div>
+
+        {/* Right Controls: Speed, Wardrobe & Mini-map Toggles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Admin / Host Speed Controls */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => isHost && setShowAdminSpeedModal(!showAdminSpeedModal)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: isHost ? '#0f172a' : '#090d16',
+                border: isHost ? '1px solid #38bdf8' : '1px solid #334155',
+                borderRadius: '6px',
+                color: isHost ? '#38bdf8' : '#94a3b8',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: isHost ? 'pointer' : 'default',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title={isHost ? 'Admin Speed Control (Click to Adjust)' : 'Operative Movement Speed'}
+            >
+              <Zap size={13} color="#f59e0b" />
+              <span>SPEED: {playerSpeed}x</span>
+              {isHost && <Sliders size={12} />}
+            </button>
+
+            {isHost && showAdminSpeedModal && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '115%',
+                  right: 0,
+                  width: '240px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.98)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid #38bdf8',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(56, 189, 248, 0.25)',
+                  zIndex: 50
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#38bdf8' }}>HOST SPEED CONTROL</span>
+                  <button
+                    onClick={() => setShowAdminSpeedModal(false)}
+                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#cbd5e1', marginBottom: '6px' }}>
+                  <span>Speed:</span>
+                  <span style={{ fontWeight: 800, color: '#f59e0b' }}>{playerSpeed}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="1.5"
+                  max="4.5"
+                  step="0.1"
+                  value={playerSpeed}
+                  onChange={(e) => {
+                    const spd = parseFloat(e.target.value);
+                    setPlayerSpeed(spd);
+                    socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: spd });
+                  }}
+                  style={{ width: '100%', marginBottom: '10px', accentColor: '#38bdf8' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                  {[
+                    { label: '1.8x', val: 1.8 },
+                    { label: '2.4x', val: 2.4 },
+                    { label: '3.2x', val: 3.2 },
+                    { label: '4.0x', val: 4.0 }
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      onClick={() => {
+                        setPlayerSpeed(p.val);
+                        socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: p.val });
+                      }}
+                      style={{
+                        padding: '4px 0',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        backgroundColor: playerSpeed === p.val ? '#0284c7' : '#1e293b',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: '#fff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowWardrobe(true)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#1e1b4b',
+              border: '1px solid #6366f1',
+              borderRadius: '6px',
+              color: '#c7d2fe',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Sparkles size={13} color="#818cf8" /> WARDROBE
+          </button>
+
+          <button
+            onClick={() => setShowMiniMap(!showMiniMap)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: '#94a3b8',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Compass size={13} color="#38bdf8" /> {showMiniMap ? 'HIDE MAP' : 'MINI-MAP'}
+          </button>
+
+          {/* Role Pill */}
+          {phase !== 'LOBBY' && (
+            <div
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: 800,
+                backgroundColor: myRole === 'MAFIA' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                border: myRole === 'MAFIA' ? '1px solid #ef4444' : '1px solid #10b981',
+                color: myRole === 'MAFIA' ? '#f87171' : '#34d399'
+              }}
+            >
+              {myRole === 'MAFIA' ? 'ROLE: INFILTRATOR' : 'ROLE: DEVELOPER'}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Canvas Play Area */}
+      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <canvas
+          ref={canvasRef}
+          style={{
+            width: '960px',
+            height: '640px',
+            borderRadius: '12px',
+            border: '1px solid #1e293b',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
+          }}
+        />
+
+        {/* Floating Contextual Interaction Pill */}
+        {nearbyAction && activeTerminal === null && phase !== 'VOTING' && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '12px 24px',
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              border: nearbyAction.type === 'emergency' ? '2px solid #ef4444' : '2px solid #38bdf8',
+              borderRadius: '30px',
+              boxShadow: '0 0 25px rgba(56, 189, 248, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              zIndex: 15
+            }}
+          >
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
+              {nearbyAction.name}
+            </span>
+
+            {nearbyAction.type === 'terminal' && (
+              <button
+                onClick={() => {
+                  const term = terminals.find((t) => t.id === nearbyAction.id);
+                  if (term) {
+                    setActiveTerminal(term);
+                    setTerminalCode(term.code || term.starterCode);
+                    setTestResults(null);
+                  }
+                }}
+                style={{
+                  padding: '6px 14px',
+                  backgroundColor: '#0284c7',
+                  border: 'none',
+                  borderRadius: '20px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                [E] OPEN MONACO IDE
+              </button>
+            )}
+
+            {nearbyAction.type === 'terminal' && myRole === 'MAFIA' && phase === 'NIGHT' && (
+              <button
+                onClick={() => socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id })}
+                style={{
+                  padding: '6px 14px',
+                  backgroundColor: '#dc2626',
+                  border: 'none',
+                  borderRadius: '20px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                [Q] SABOTAGE
+              </button>
+            )}
+
+            {nearbyAction.type === 'wardrobe' && (
+              <button
+                onClick={() => setShowWardrobe(true)}
+                style={{
+                  padding: '6px 14px',
+                  backgroundColor: '#6366f1',
+                  border: 'none',
+                  borderRadius: '20px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                [E] CUSTOMIZE SUIT
+              </button>
+            )}
+
+            {nearbyAction.type === 'emergency' && (
+              <button
+                onClick={() => {
+                  if (phase === 'DAY') socket.emit('call_emergency', { roomId });
+                }}
+                style={{
+                  padding: '6px 14px',
+                  backgroundColor: '#dc2626',
+                  border: 'none',
+                  borderRadius: '20px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                [E] CALL EMERGENCY MEETING
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* LOBBY WAITING DECK OVERLAY (Launch & Settings Deck) */}
+        {phase === 'LOBBY' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              width: '320px',
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid #334155',
+              borderRadius: '10px',
+              padding: '16px',
+              zIndex: 15
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: '#38bdf8' }}>
+                LOBBY ROSTER ({players.length}/3 MINIMUM)
+              </span>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                Host: {players.find((p) => p.id === hostId)?.username || 'Connecting...'}
+              </span>
+            </div>
+
+            {/* 3-Player Lobby Gate Status */}
+            <div
+              style={{
+                padding: '8px 10px',
+                backgroundColor: players.length >= 3 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                border: players.length >= 3 ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '6px',
+                marginBottom: '10px',
+                fontSize: '11px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: players.length >= 3 ? '#34d399' : '#f87171' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: players.length >= 3 ? '#10b981' : '#ef4444' }} />
+                <span>{players.length >= 3 ? 'SQUAD READY (3/3 LOGGED IN)' : `WAITING FOR 3 PLAYERS (${players.length}/3)`}</span>
+              </div>
+              <div style={{ fontSize: '10px', color: '#cbd5e1' }}>
+                {players.length >= 3
+                  ? '3 players logged in! Redirecting to main battle map...'
+                  : `Game stays in lobby until 3 players log in (need ${3 - players.length} more).`}
+              </div>
+            </div>
+
+            {/* Imposter Scaling Info & Setting */}
+            <div style={{ padding: '8px 10px', backgroundColor: '#090d16', borderRadius: '6px', border: '1px solid #1e293b', marginBottom: '8px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '4px' }}>
+                <span>Imposter Scaling:</span>
+                <span style={{ color: '#ef4444', fontWeight: 700 }}>{calculatedImposters} Infiltrator(s)</span>
+              </div>
+              {isHost && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                  <label style={{ fontSize: '10px', color: '#64748b' }}>Imposter Mode:</label>
+                  <select
+                    value={imposterSetting}
+                    onChange={(e) => socket.emit('set_game_settings', { roomId, imposterSetting: e.target.value, playerSpeed })}
+                    style={{ flex: 1, padding: '4px 6px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '10px' }}
+                  >
+                    <option value="auto">Auto (Dynamic Scale)</option>
+                    <option value="1">1 Infiltrator</option>
+                    <option value="2">2 Infiltrators</option>
+                    <option value="3">3 Infiltrators</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Movement Speed Info & Host Calibration */}
+            <div style={{ padding: '8px 10px', backgroundColor: '#090d16', borderRadius: '6px', border: '1px solid #1e293b', marginBottom: '12px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '4px' }}>
+                <span>Movement Speed:</span>
+                <span style={{ color: '#38bdf8', fontWeight: 700 }}>{playerSpeed}x {playerSpeed === 2.4 ? '(Balanced)' : ''}</span>
+              </div>
+              {isHost ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                  <input
+                    type="range"
+                    min="1.5"
+                    max="4.5"
+                    step="0.1"
+                    value={playerSpeed}
+                    onChange={(e) => {
+                      const spd = parseFloat(e.target.value);
+                      setPlayerSpeed(spd);
+                      socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: spd });
+                    }}
+                    style={{ width: '100%', accentColor: '#38bdf8' }}
+                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                    {[
+                      { label: 'Stealth 1.8x', val: 1.8 },
+                      { label: 'Normal 2.4x', val: 2.4 },
+                      { label: 'Combat 3.2x', val: 3.2 },
+                      { label: 'Super 4.0x', val: 4.0 }
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => {
+                          setPlayerSpeed(p.val);
+                          socket.emit('set_game_settings', { roomId, imposterSetting, playerSpeed: p.val });
+                        }}
+                        style={{
+                          padding: '3px 0',
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          backgroundColor: playerSpeed === p.val ? '#0284c7' : '#1e293b',
+                          border: playerSpeed === p.val ? '1px solid #38bdf8' : '1px solid #334155',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                  Speed managed by Host.
+                </div>
+              )}
+            </div>
+
+            {/* Player Badges */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto', marginBottom: '14px' }}>
+              {players.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 10px',
+                    backgroundColor: '#090d16',
+                    borderRadius: '6px',
+                    border: p.id === socket.id ? '1px solid #38bdf8' : '1px solid #1e293b'
+                  }}
+                >
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: p.color }} />
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', flex: 1 }}>
+                    {p.username} {p.id === socket.id && '(YOU)'}
+                  </span>
+                  <span style={{ fontSize: '9px', color: '#64748b' }}>{p.operativeTitle || 'Operative'}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Start Button (Host only) */}
+            {isHost ? (
+              <button
+                onClick={() => socket.emit('start_game', { roomId })}
+                disabled={players.length < 3}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: players.length >= 3 ? '#0284c7' : '#334155',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  letterSpacing: '1px',
+                  cursor: players.length >= 3 ? 'pointer' : 'not-allowed',
+                  boxShadow: players.length >= 3 ? '0 0 15px rgba(2, 132, 199, 0.5)' : 'none'
+                }}
+              >
+                {players.length >= 3 ? 'REDIRECT SQUAD TO MAIN MAP ➔' : `LOBBY LOCKED (${players.length}/3 PLAYERS)`}
+              </button>
+            ) : (
+              <div style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8', padding: '8px' }}>
+                {players.length >= 3
+                  ? '3 players in lobby! Redirecting to main map...'
+                  : `Game stays in lobby until 3 players log in (${players.length}/3)...`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* REAL-TIME MINI-MAP HUD (Top Right) */}
+        {showMiniMap && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              width: '200px',
+              height: '150px',
+              backgroundColor: 'rgba(9, 13, 22, 0.92)',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
+              zIndex: 15,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Map Rooms Outline in miniature */}
+            <div style={{ position: 'absolute', inset: 0, opacity: 0.35 }}>
+              <div style={{ position: 'absolute', left: '37%', top: '7%', width: '26%', height: '23%', border: '1px solid #38bdf8' }} />  {/* Bridge */}
+              <div style={{ position: 'absolute', left: '7%', top: '7%', width: '22%', height: '24%', border: '1px solid #6366f1' }} />   {/* AI Mainframe */}
+              <div style={{ position: 'absolute', left: '71%', top: '7%', width: '22%', height: '24%', border: '1px solid #f59e0b' }} />  {/* Comms & Sensors */}
+              <div style={{ position: 'absolute', left: '6%', top: '41%', width: '22%', height: '28%', border: '1px solid #ef4444' }} />   {/* Security Vault */}
+              <div style={{ position: 'absolute', left: '72%', top: '41%', width: '22%', height: '28%', border: '1px solid #10b981' }} />  {/* Bio-Lab */}
+              <div style={{ position: 'absolute', left: '37%', top: '38%', width: '26%', height: '23%', border: '1px solid #64748b' }} />  {/* Central Atrium */}
+              <div style={{ position: 'absolute', left: '37%', top: '70%', width: '26%', height: '24%', border: '1px solid #8b5cf6' }} />  {/* Reactor Core */}
+            </div>
+
+            {/* Terminal Status Blips */}
+            {terminals.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  position: 'absolute',
+                  left: `${(t.x / MAP_WIDTH) * 200 - 3}px`,
+                  top: `${(t.y / MAP_HEIGHT) * 150 - 3}px`,
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: t.solved ? '#10b981' : (t.sabotaged ? '#ef4444' : '#f59e0b')
+                }}
+              />
+            ))}
+
+            {/* Local Player Blip */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${(localPos.x / MAP_WIDTH) * 200 - 4}px`,
+                top: `${(localPos.y / MAP_HEIGHT) * 150 - 4}px`,
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                border: '2px solid #38bdf8',
+                boxShadow: '0 0 8px #38bdf8'
+              }}
+            />
+
+            <div style={{ position: 'absolute', bottom: '4px', right: '6px', fontSize: '8px', color: '#64748b' }}>
+              RADAR // 3600x2700 MEGASTRUCTURE
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* =====================================================================
+          WARDROBE / OPERATIVE CUSTOMIZER MODAL
+          ===================================================================== */}
+      {showWardrobe && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(5, 7, 13, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100
+          }}
+        >
+          <div
+            style={{
+              width: '460px',
+              backgroundColor: '#0f172a',
+              border: '1px solid #38bdf8',
+              borderRadius: '12px',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.9), 0 0 30px rgba(56, 189, 248, 0.2)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '12px', marginBottom: '18px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 800, color: '#38bdf8' }}>
+                TACTICAL WARDROBE // ARMOR CUSTOMIZER
+              </span>
+              <button
+                onClick={() => setShowWardrobe(false)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Avengers Hero Selection */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+                  CHOOSE AVENGERS HERO
+                </label>
+                <span style={{ fontSize: '11px', color: selectedHeroObj.primaryColor, fontWeight: 800 }}>
+                  {selectedHeroObj.name} ({selectedHeroObj.alias})
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '210px', overflowY: 'auto', paddingRight: '4px' }}>
+                {AVENGERS_HEROES.map((h) => {
+                  const isSel = selectedHero === h.id;
+                  return (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHero(h.id);
+                        setSelectedColor(h.primaryColor);
+                        setSelectedVisor(h.visorColor);
+                        setSelectedTitle(h.roleTitle);
+                        localStorage.setItem('code_mafia_hero', h.id);
+                        socket.emit('update_appearance', {
+                          roomId,
+                          color: h.primaryColor,
+                          visorColor: h.visorColor,
+                          operativeTitle: h.roleTitle,
+                          characterId: h.id
+                        });
+                      }}
+                      style={{
+                        padding: '8px 6px',
+                        borderRadius: '8px',
+                        backgroundColor: isSel ? 'rgba(30, 41, 59, 0.95)' : '#090d16',
+                        border: isSel ? `2px solid ${h.primaryColor}` : '1px solid #1e293b',
+                        boxShadow: isSel ? `0 0 12px ${h.glowColor}` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '3px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>{h.iconEmoji}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: isSel ? '#ffffff' : '#cbd5e1' }}>
+                        {h.name}
+                      </span>
+                      <span style={{ fontSize: '9px', color: h.primaryColor, fontWeight: 600 }}>
+                        {h.alias}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Operative Title */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '8px' }}>
+                HERO SPECIALIZATION TITLE
+              </label>
+              <select
+                value={selectedTitle}
+                onChange={(e) => {
+                  setSelectedTitle(e.target.value);
+                  socket.emit('update_appearance', {
+                    roomId,
+                    color: selectedHeroObj.primaryColor,
+                    visorColor: selectedHeroObj.visorColor,
+                    operativeTitle: e.target.value,
+                    characterId: selectedHero
+                  });
+                }}
+                style={{ width: '100%', padding: '8px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '12px' }}
+              >
+                {OPERATIVE_TITLES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowWardrobe(false)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: '#0284c7',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              SAVE & CLOSE WARDROBE
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MONACO IDE MODAL (Terminal Debugging)
+          ===================================================================== */}
+      {activeTerminal && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(5, 7, 13, 0.92)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            zIndex: 90
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '900px',
+              height: '85vh',
+              backgroundColor: '#090d16',
+              border: '1px solid #38bdf8',
+              borderRadius: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.25)'
+            }}
+          >
+            {/* Terminal Header */}
+            <div
+              style={{
+                height: '48px',
+                backgroundColor: '#0f172a',
+                borderBottom: '1px solid #1e293b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 16px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Terminal size={18} color="#38bdf8" />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
+                  {activeTerminal.name}
+                </span>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>({activeTerminal.roomName})</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={() => {
+                    setIsRunningTests(true);
+                    if (!connected || isSoloMode) {
+                      setTimeout(() => {
+                        const results = evaluateTerminalLocally(activeTerminal, terminalCode);
+                        setIsRunningTests(false);
+                        setTestResults(results);
+                        if (results.isSolved) {
+                          setTerminals((prev) =>
+                            prev.map((t) => (t.id === activeTerminal.id ? { ...t, solved: true } : t))
+                          );
+                          setSolvedCount((c) => c + 1);
+                          setChatMessages((prev) => [
+                            ...prev,
+                            {
+                              id: Date.now().toString(),
+                              sender: 'SHIP-AI',
+                              text: `[SYSTEM] ${activeTerminal.name} has been stabilized by ${username.trim() || 'Operative'}!`,
+                              system: true
+                            }
+                          ]);
+                        }
+                      }, 350);
+                      return;
+                    }
+                    socket.emit('run_terminal_tests', {
+                      roomId,
+                      terminalId: activeTerminal.id,
+                      userCode: terminalCode
+                    });
+                  }}
+                  disabled={isRunningTests}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    backgroundColor: '#0284c7',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: isRunningTests ? 'wait' : 'pointer'
+                  }}
+                >
+                  <Play size={14} /> {isRunningTests ? 'EVALUATING...' : 'RUN TEST SUITE ➔'}
+                </button>
+
+                <button
+                  onClick={() => setActiveTerminal(null)}
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Split View: Spec / Editor */}
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+              {/* Left Column: Spec & Test Results */}
+              <div style={{ width: '340px', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column', backgroundColor: '#090d16' }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid #1e293b', flex: 1, overflowY: 'auto' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#38bdf8' }}>MISSION SPECIFICATION:</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#cbd5e1', lineHeight: '1.5' }}>
+                    {activeTerminal.description}
+                  </p>
+
+                  {/* Test Results Output */}
+                  {testResults && (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: testResults.isSolved ? '#10b981' : '#ef4444' }}>
+                          TESTS: {testResults.passedCount} / {testResults.total} PASSED
+                        </span>
+                        {testResults.isSolved && (
+                          <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 700 }}>STABILIZED!</span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {testResults.logs?.map((l, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              padding: '8px',
+                              borderRadius: '6px',
+                              backgroundColor: l.passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              border: l.passed ? '1px solid #059669' : '1px solid #dc2626',
+                              fontSize: '11px'
+                            }}
+                          >
+                            <div style={{ fontWeight: 700, color: l.passed ? '#10b981' : '#f87171' }}>
+                              Test #{l.testNumber}: {l.passed ? 'PASSED' : 'FAILED'}
+                            </div>
+                            <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '2px' }}>Input: {l.input}</div>
+                            <div style={{ color: '#cbd5e1', fontSize: '10px' }}>Expected: {l.expected}</div>
+                            {l.output && <div style={{ color: '#38bdf8', fontSize: '10px' }}>Got: {l.output}</div>}
+                            {l.error && <div style={{ color: '#f87171', fontSize: '10px' }}>Error: {l.error}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Monaco IDE */}
+              <div style={{ flex: 1, height: '100%' }}>
+                <Editor
+                  height="100%"
+                  theme="vs-dark"
+                  language="javascript"
+                  value={terminalCode}
+                  onChange={(val) => setTerminalCode(val || '')}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    fontFamily: "'JetBrains Mono', Consolas, monospace",
+                    scrollBeyondLastLine: false,
+                    padding: { top: 12 }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          EMERGENCY STANDUP MODAL (Voting & Debate Screen)
+          ===================================================================== */}
+      {phase === 'VOTING' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(5, 7, 13, 0.95)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '24px',
+            zIndex: 95
+          }}
+        >
+          {/* Voting Header */}
+          <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', fontSize: '12px', fontWeight: 800, marginBottom: '8px' }}>
+              <AlertTriangle size={14} /> EMERGENCY LOCKDOWN MEETING // TIME REMAINING: {timer}s
+            </div>
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#f8fafc' }}>
+              DEDUCE THE INFILTRATORS
+            </h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+              Caller: <span style={{ color: '#38bdf8' }}>{emergencyCaller || 'Station Power Grid'}</span>. Cast your ballot or skip vote.
+            </p>
+          </div>
+
+          {/* Voting Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', width: '100%', maxWidth: '840px', marginBottom: '20px' }}>
+            {players.filter((p) => p.isAlive).map((suspect) => {
+              const hasVoted = Boolean(suspect.votedFor);
+              return (
+                <div
+                  key={suspect.id}
+                  style={{
+                    padding: '16px',
+                    backgroundColor: votedSuspect === suspect.id ? '#1e293b' : '#0f172a',
+                    border: votedSuspect === suspect.id ? '2px solid #38bdf8' : '1px solid #334155',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    position: 'relative'
+                  }}
+                >
+                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: suspect.color }} />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
+                    {suspect.username} {suspect.id === socket.id && '(YOU)'}
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#64748b' }}>
+                    {hasVoted ? '✓ Ballot Cast' : 'Thinking...'}
+                  </span>
+
+                  {suspect.id !== socket.id && !votedSuspect && (
+                    <button
+                      onClick={() => {
+                        setVotedSuspect(suspect.id);
+                        socket.emit('cast_vote', { roomId, suspectId: suspect.id });
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        marginTop: '4px',
+                        backgroundColor: '#dc2626',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      VOTE SUSPECT 🎯
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Skip Vote Button */}
+          {!votedSuspect && (
+            <button
+              onClick={() => {
+                setVotedSuspect('SKIP');
+                socket.emit('cast_vote', { roomId, suspectId: 'SKIP' });
+              }}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#334155',
+                border: '1px solid #64748b',
+                borderRadius: '8px',
+                color: '#f8fafc',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                marginBottom: '16px'
+              }}
+            >
+              SKIP BALLOT / INSUFFICIENT EVIDENCE
+            </button>
+          )}
+
+          {/* Live Standup Debate Comms Chat */}
+          <div style={{ width: '100%', maxWidth: '840px', height: '160px', backgroundColor: '#090d16', border: '1px solid #1e293b', borderRadius: '8px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} style={{ fontSize: '11px' }}>
+                  <span style={{ color: msg.color || '#38bdf8', fontWeight: 700 }}>[{msg.sender}]: </span>
+                  <span style={{ color: msg.system ? '#f59e0b' : '#cbd5e1' }}>{msg.text}</span>
+                </div>
+              ))}
+              <div ref={chatBottomRef} />
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!chatInput.trim()) return;
+                if (!connected || isSoloMode) {
+                  const heroObj = getHero(selectedHero);
+                  setChatMessages((prev) => [
+                    ...prev,
+                    {
+                      id: Date.now().toString(),
+                      sender: username.trim() || 'Operative',
+                      color: heroObj.primaryColor,
+                      text: chatInput.trim(),
+                      system: false
+                    }
+                  ]);
+                } else {
+                  socket.emit('send_chat', { roomId, message: chatInput });
+                }
+                setChatInput('');
+              }}
+              style={{ display: 'flex', borderTop: '1px solid #1e293b' }}
+            >
+              <input
+                type="text"
+                placeholder="State your defense or report suspicious activity..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', backgroundColor: '#0f172a', border: 'none', color: '#fff', fontSize: '12px' }}
+              />
+              <button
+                type="submit"
+                style={{ padding: '0 16px', backgroundColor: '#0284c7', border: 'none', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                TRANSMIT
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          GAME OVER / MISSION DEBRIEF MODAL
+          ===================================================================== */}
+      {phase === 'GAME_OVER' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(5, 7, 13, 0.96)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 110
+          }}
+        >
+          <div
+            style={{
+              width: '540px',
+              backgroundColor: '#0f172a',
+              border: gameWinner === 'DEVELOPERS' ? '2px solid #10b981' : '2px solid #ef4444',
+              borderRadius: '16px',
+              padding: '32px',
+              textAlign: 'center',
+              boxShadow: gameWinner === 'DEVELOPERS' ? '0 0 50px rgba(16, 185, 129, 0.3)' : '0 0 50px rgba(239, 68, 68, 0.3)'
+            }}
+          >
+            <Trophy size={48} color={gameWinner === 'DEVELOPERS' ? '#10b981' : '#ef4444'} style={{ margin: '0 auto 12px auto' }} />
+            <h2 style={{ fontSize: '32px', fontWeight: 900, color: gameWinner === 'DEVELOPERS' ? '#10b981' : '#ef4444', margin: '0 0 8px 0' }}>
+              {gameWinner === 'DEVELOPERS' ? 'MISSION SUCCESS // CREW VICTORY' : 'MISSION FAILED // INFILTRATORS WON'}
+            </h2>
+            <p style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+              {winReason}
+            </p>
+
+            {/* Unmasking Roster */}
+            <div style={{ backgroundColor: '#090d16', border: '1px solid #1e293b', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', marginBottom: '8px' }}>
+                SECRET ROLES UNMASKED:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {players.map((p) => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '4px 8px' }}>
+                    <span style={{ color: p.color, fontWeight: 700 }}>{p.username}</span>
+                    <span style={{ color: p.role === 'MAFIA' ? '#f87171' : '#34d399', fontWeight: 800 }}>
+                      {p.role === 'MAFIA' ? 'INFILTRATOR (MAFIA)' : 'CREW DEVELOPER'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {isHost && (
+              <button
+                onClick={() => socket.emit('start_game', { roomId })}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  backgroundColor: '#0284c7',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  letterSpacing: '1px'
+                }}
+              >
+                REMATCH // PLAY AGAIN ➔
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          THANOS SNAP CINEMATIC ELIMINATION MODAL
+          ===================================================================== */}
+      {eliminationCutscene && (
+        <EliminationCinematicModal
+          cutscene={eliminationCutscene}
+          onClose={() => setEliminationCutscene(null)}
+        />
+      )}
+    </div>
+  );
+}

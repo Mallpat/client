@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+package-lock.json
+client/node_modules/
+server/node_modules/
+
+# Production build output
+client/dist/
+dist/
+.uix/
+
+# Local Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
