@@ -37,23 +37,42 @@ import {
 } from 'lucide-react';
 import { AVENGERS_HEROES, getHero, drawAvenger, drawFallenRelic, drawThanosSnap } from './avengers';
 
+const PROD_SERVER_URL = 'https://code-mafia-server.onrender.com';
+
 const getInitialServerUrl = () => {
   if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const saved = localStorage.getItem('code_mafia_server_url');
-    if (saved) return saved;
-    if (import.meta.env.VITE_SERVER_URL) return import.meta.env.VITE_SERVER_URL;
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    
+    if (saved && saved.trim()) {
+      const trimmed = saved.trim().replace(/\/$/, '');
+      // If deployed on Vercel/remote domain, disregard obsolete localhost URLs
+      if (!isLocalhost && (trimmed.includes('localhost') || trimmed.includes('127.0.0.1'))) {
+        localStorage.removeItem('code_mafia_server_url');
+      } else {
+        return trimmed;
+      }
+    }
+    
+    if (import.meta.env.VITE_SERVER_URL) {
+      return import.meta.env.VITE_SERVER_URL.trim().replace(/\/$/, '');
+    }
+    
+    if (isLocalhost) {
       return 'http://localhost:5000';
     }
+    
+    return PROD_SERVER_URL;
   }
-  return import.meta.env.VITE_SERVER_URL || '';
+  return import.meta.env.VITE_SERVER_URL || PROD_SERVER_URL;
 };
 
 const SERVER_URL = getInitialServerUrl();
-const socket = io(SERVER_URL || 'http://localhost:5000', {
+const socket = io(SERVER_URL || PROD_SERVER_URL, {
   autoConnect: true,
-  reconnectionAttempts: 15,
-  reconnectionDelay: 1000
+  reconnectionAttempts: 30,
+  reconnectionDelay: 1000,
+  transports: ['websocket', 'polling']
 });
 
 // Backward-compatible fallback colorways
@@ -475,7 +494,7 @@ export default function App() {
   const [eliminationCutscene, setEliminationCutscene] = useState(null);
 
   const [showServerConfig, setShowServerConfig] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(SERVER_URL || '');
+  const [serverUrlInput, setServerUrlInput] = useState(SERVER_URL || PROD_SERVER_URL);
   const [showWardrobe, setShowWardrobe] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
 
@@ -1846,26 +1865,41 @@ export default function App() {
                 </div>
               )}
               {showServerConfig && (
-                <div style={{ marginTop: '4px', display: 'flex', gap: '6px' }}>
-                  <input
-                    type="text"
-                    placeholder="https://your-server.onrender.com"
-                    value={serverUrlInput}
-                    onChange={(e) => setServerUrlInput(e.target.value)}
-                    style={{ flex: 1, padding: '6px 8px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!serverUrlInput.trim()) return;
-                      const formatted = serverUrlInput.trim().replace(/\/$/, '');
-                      localStorage.setItem('code_mafia_server_url', formatted);
-                      window.location.reload();
-                    }}
-                    style={{ padding: '6px 12px', backgroundColor: '#0284c7', border: 'none', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Connect
-                  </button>
+                <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder="https://code-mafia-server.onrender.com"
+                      value={serverUrlInput}
+                      onChange={(e) => setServerUrlInput(e.target.value)}
+                      style={{ flex: 1, padding: '6px 8px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const formatted = (serverUrlInput.trim() || PROD_SERVER_URL).replace(/\/$/, '');
+                        localStorage.setItem('code_mafia_server_url', formatted);
+                        window.location.reload();
+                      }}
+                      style={{ padding: '6px 12px', backgroundColor: '#0284c7', border: 'none', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Connect
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.removeItem('code_mafia_server_url');
+                        window.location.reload();
+                      }}
+                      title="Reset to official cloud server"
+                      style={{ padding: '6px 10px', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '4px', color: '#94a3b8', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <span style={{ fontSize: '9px', color: '#64748b' }}>
+                    Default Cloud Server: <code style={{ color: '#38bdf8' }}>{PROD_SERVER_URL}</code>
+                  </span>
                 </div>
               )}
             </div>
