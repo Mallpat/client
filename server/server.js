@@ -483,7 +483,7 @@ function resolveVotingPhase(roomId) {
 
   if (!checkWinConditions(roomId)) {
     setTimeout(() => {
-      startPhaseTimer(roomId, 'DAY', 90);
+      startPhaseTimer(roomId, 'DAY', 600); // 10 minutes (600s) code sprint
     }, 5000);
   }
 }
@@ -507,7 +507,7 @@ io.on('connection', (socket) => {
         id: cleanRoom,
         hostId: socket.id,
         phase: 'LOBBY',
-        timer: 90,
+        timer: 600, // 10 minutes (600s)
         timerInterval: null,
         imposterSetting: 'auto',
         playerSpeed: 2.4,
@@ -668,7 +668,7 @@ io.on('connection', (socket) => {
       system: true
     });
 
-    startPhaseTimer(roomId, 'DAY', 90);
+    startPhaseTimer(roomId, 'DAY', 600); // 10 minutes (600s) code sprint
 
     io.to(roomId).emit('mission_redirect', {
       message: '3 Operatives confirmed! You have been redirected to the main Dreadnought map.',

@@ -531,7 +531,7 @@ export default function App() {
 
   // Authoritative State from Server
   const [phase, setPhase] = useState('LOBBY'); // 'LOBBY' | 'DAY' | 'NIGHT' | 'VOTING' | 'GAME_OVER'
-  const [timer, setTimer] = useState(90);
+  const [timer, setTimer] = useState(600); // 10 minutes (600s) code sprint
   const [hostId, setHostId] = useState(null);
   const [isHost, setIsHost] = useState(false);
   const [myRole, setMyRole] = useState('DEV'); // 'DEV' | 'MAFIA' | 'PENDING'
@@ -564,7 +564,7 @@ export default function App() {
     const heroObj = getHero(selectedHero);
     setIsSoloMode(true);
     setPhase('DAY');
-    setTimer(180);
+    setTimer(600); // 10 minutes (600s) code sprint
     setIsHost(true);
     setMyRole('DEV');
     setTotalTerminals(6);
@@ -861,6 +861,21 @@ export default function App() {
       socket.off('error_message');
     };
   }, []);
+
+  // Solo Simulation 10-Minute Code Sprint Timer (10:00 Countdown)
+  useEffect(() => {
+    if (!isSoloMode || phase === 'LOBBY' || phase === 'GAME_OVER') return;
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isSoloMode, phase]);
 
   // Keyboard Movement Listener (Enabled in LOBBY, DAY, and NIGHT)
   useEffect(() => {
@@ -2664,9 +2679,9 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           {phase !== 'LOBBY' && phase !== 'GAME_OVER' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={16} color={timer < 15 ? '#ef4444' : '#38bdf8'} />
-              <span style={{ fontSize: '18px', fontWeight: 800, color: timer < 15 ? '#ef4444' : '#ffffff' }}>
-                {timer}s
+              <Clock size={16} color={timer < 60 ? '#ef4444' : '#38bdf8'} />
+              <span style={{ fontSize: '18px', fontWeight: 800, color: timer < 60 ? '#ef4444' : '#ffffff', fontVariantNumeric: 'tabular-nums' }}>
+                {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
               </span>
             </div>
           )}
@@ -3751,6 +3766,26 @@ export default function App() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* 10-Minute Code Sprint Timer Badge */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    border: timer < 60 ? '1px solid #ef4444' : '1px solid #0284c7',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: timer < 60 ? '#f87171' : '#38bdf8',
+                    fontVariantNumeric: 'tabular-nums'
+                  }}
+                >
+                  <Clock size={13} color={timer < 60 ? '#ef4444' : '#38bdf8'} />
+                  <span>TIME REMAINING: {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}</span>
+                </div>
+
                 <button
                   onClick={() => {
                     setIsRunningTests(true);
