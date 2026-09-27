@@ -33,9 +33,23 @@ import {
   Settings,
   Sparkles,
   Sliders,
-  Maximize2
+  Maximize2,
+  Megaphone
 } from 'lucide-react';
-import { AVENGERS_HEROES, getHero, drawAvenger, drawFallenRelic, drawThanosSnap } from './avengers';
+import {
+  CREWMATE_COLORS,
+  CREWMATE_HATS,
+  getCrewmateColor,
+  getHero,
+  drawCrewmate,
+  drawDeadBody,
+  drawVent,
+  drawThanosSnap,
+  AVENGERS_HEROES,
+  drawAvenger,
+  drawFallenRelic
+} from './amongus';
+import { CrewmatePreview } from './CrewmatePreview';
 
 // Safe canvas roundRect polyfill for broad browser compatibility
 if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
@@ -104,28 +118,30 @@ const VISOR_COLORS = AVENGERS_HEROES.map((h) => ({
 }));
 
 const OPERATIVE_TITLES = [
-  'Armored Avenger',
-  'First Avenger',
-  'God of Thunder',
-  'Gamma Juggernaut',
-  'Master Assassin',
-  'Web-Slinger',
-  'Sorcerer Supreme',
-  'King of Wakanda',
-  'Master Marksman'
+  'Crewmate',
+  'Captain',
+  'Engineer',
+  'Scientist',
+  'Detective',
+  'Security Guard',
+  'Medic',
+  'Navigator',
+  'Electrician'
 ];
 
 const RANDOM_NAMES = [
-  'Tony_Stark',
-  'Steve_Rogers',
-  'Thor_Odinson',
-  'Bruce_Banner',
-  'Nat_Romanoff',
-  'Peter_Parker',
-  'Stephen_Strange',
-  'King_TChalla',
-  'Clint_Barton',
-  'Avenger_Prime'
+  'RedSus',
+  'Cyan',
+  'Crewmate',
+  'Detective',
+  'Captain',
+  'Navigator',
+  'Engineer',
+  'Scientist',
+  'Ghost',
+  'Skipper',
+  'Sheriff',
+  'Innocent'
 ];
 
 // Map Dimensions (Expanded Dreadnought Megastructure: 3600 x 2700)
@@ -382,8 +398,8 @@ function EliminationCinematicModal({ cutscene, onClose }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    canvas.width = 600;
-    canvas.height = 360;
+    canvas.width = 640;
+    canvas.height = 380;
 
     const DURATION = 4800; // ms
     const startTime = cutscene.startTime || Date.now();
@@ -394,7 +410,7 @@ function EliminationCinematicModal({ cutscene, onClose }) {
       const time = elapsed / 1000;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawThanosSnap(ctx, cutscene.characterId || 'ironman', progress, time, canvas.width, canvas.height);
+      drawThanosSnap(ctx, cutscene.characterId || 'red', progress, time, canvas.width, canvas.height);
 
       if (progress < 1) {
         animId = requestAnimationFrame(renderFrame);
@@ -407,15 +423,14 @@ function EliminationCinematicModal({ cutscene, onClose }) {
     return () => cancelAnimationFrame(animId);
   }, [cutscene, onClose]);
 
-  const heroObj = getHero(cutscene.characterId || 'ironman');
+  const colObj = getCrewmateColor(cutscene.characterId || 'red');
 
   return (
     <div
       style={{
         position: 'absolute',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 13, 0.94)',
-        backdropFilter: 'blur(20px)',
+        backgroundColor: '#000000',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -424,43 +439,31 @@ function EliminationCinematicModal({ cutscene, onClose }) {
     >
       <div
         style={{
-          width: '640px',
-          backgroundColor: '#090d16',
-          border: cutscene.wasMafia ? '2px solid #ef4444' : '2px solid #38bdf8',
+          width: '680px',
+          backgroundColor: '#000000',
           borderRadius: '16px',
-          padding: '24px',
+          padding: '16px',
           textAlign: 'center',
-          boxShadow: cutscene.wasMafia
-            ? '0 0 60px rgba(239, 68, 68, 0.4), 0 25px 50px rgba(0,0,0,0.9)'
-            : '0 0 60px rgba(56, 189, 248, 0.4), 0 25px 50px rgba(0,0,0,0.9)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <span style={{ fontSize: '18px' }}>⚡</span>
-          <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '2px', color: '#f59e0b' }}>
-            THANOS SNAP INITIATED // EJECTION CUTSCENE
-          </span>
-          <span style={{ fontSize: '18px' }}>⚡</span>
-        </div>
-
         <canvas
           ref={canvasRef}
           style={{
-            width: '600px',
-            height: '360px',
+            width: '640px',
+            height: '380px',
             borderRadius: '10px',
-            backgroundColor: '#030712',
-            border: '1px solid #1e293b',
-            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)'
+            backgroundColor: '#000000',
+            border: '2px solid #1e293b',
+            boxShadow: '0 0 40px rgba(0,0,0,1)'
           }}
         />
 
-        <div style={{ marginTop: '16px', width: '100%' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 900, color: heroObj.primaryColor, margin: '0 0 8px 0' }}>
-            {cutscene.username} ({heroObj.name})
+        <div style={{ marginTop: '14px', width: '100%' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: colObj.hex, margin: '0 0 8px 0', textShadow: '0 0 10px rgba(0,0,0,0.8)' }}>
+            {cutscene.username}
           </h2>
           <div
             style={{
@@ -469,12 +472,12 @@ function EliminationCinematicModal({ cutscene, onClose }) {
               backgroundColor: cutscene.wasMafia ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.15)',
               border: cutscene.wasMafia ? '1px solid #ef4444' : '1px solid #38bdf8',
               color: cutscene.wasMafia ? '#fca5a5' : '#7dd3fc',
-              fontSize: '13px',
+              fontSize: '14px',
               fontWeight: 800,
               display: 'inline-block'
             }}
           >
-            {cutscene.message || (cutscene.wasMafia ? 'An Infiltrator was vanished!' : 'An Innocent Hero was dissolved.')}
+            {cutscene.message || (cutscene.wasMafia ? `${cutscene.username} was An Impostor.` : `${cutscene.username} was not An Impostor.`)}
           </div>
         </div>
       </div>
@@ -491,9 +494,12 @@ export default function App() {
     return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
   });
 
-  // Avengers Hero Character State
+  // Among Us Crewmate Character & Hat State
   const [selectedHero, setSelectedHero] = useState(() => {
-    return localStorage.getItem('code_mafia_hero') || 'ironman';
+    return localStorage.getItem('amongus_color') || localStorage.getItem('code_mafia_hero') || 'red';
+  });
+  const [selectedHat, setSelectedHat] = useState(() => {
+    return localStorage.getItem('amongus_hat') || 'none';
   });
   const selectedHeroObj = useMemo(() => getHero(selectedHero), [selectedHero]);
 
@@ -559,11 +565,12 @@ export default function App() {
     setPlayers([
       {
         id: 'local_player',
-        username: username.trim() || 'Tony_Stark',
+        username: username.trim() || 'RedSus',
         color: heroObj.primaryColor,
         visorColor: heroObj.visorColor,
         operativeTitle: selectedTitle || heroObj.roleTitle,
         characterId: selectedHero,
+        hatId: selectedHat,
         x: 1800,
         y: 1420,
         isMoving: false,
@@ -573,12 +580,13 @@ export default function App() {
         votedFor: null
       },
       {
-        id: 'bot_cap',
-        username: 'Steve_Rogers',
-        color: '#2563eb',
-        visorColor: '#ffffff',
-        operativeTitle: 'Tactical Vanguard',
-        characterId: 'cap',
+        id: 'bot_blue',
+        username: 'Blue',
+        color: '#132ed1',
+        visorColor: '#98d0e1',
+        operativeTitle: 'Crewmate',
+        characterId: 'blue',
+        hatId: 'redcap',
         x: 1720,
         y: 1300,
         isMoving: false,
@@ -588,12 +596,13 @@ export default function App() {
         votedFor: null
       },
       {
-        id: 'bot_thor',
-        username: 'Thor_Odinson',
-        color: '#38bdf8',
-        visorColor: '#60a5fa',
-        operativeTitle: 'God of Thunder',
-        characterId: 'thor',
+        id: 'bot_cyan',
+        username: 'Cyan',
+        color: '#38fedc',
+        visorColor: '#98d0e1',
+        operativeTitle: 'Crewmate',
+        characterId: 'cyan',
+        hatId: 'sprout',
         x: 1880,
         y: 1300,
         isMoving: false,
@@ -687,7 +696,7 @@ export default function App() {
       if (data.lastEjection && data.lastEjection.ejected) {
         setEliminationCutscene({
           username: data.lastEjection.username,
-          characterId: data.lastEjection.characterId || 'ironman',
+          characterId: data.lastEjection.characterId || 'red',
           wasMafia: data.lastEjection.wasMafia,
           message: data.lastEjection.message,
           startTime: Date.now()
@@ -777,6 +786,28 @@ export default function App() {
       // Sabotage Action with [Q] (Mafia only in Night phase)
       if (key === 'q' && myRole === 'MAFIA' && phase === 'NIGHT' && nearbyAction && nearbyAction.type === 'terminal') {
         socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id });
+      }
+
+      // Report Dead Body / Call Meeting with [R]
+      if (key === 'r' && phase === 'DAY') {
+        socket.emit('call_emergency', { roomId });
+      }
+
+      // Vent Action with [V] (Mafia fast-travel)
+      if (key === 'v' && myRole === 'MAFIA') {
+        const vents = [
+          { x: 2180, y: 1100 },
+          { x: 1390, y: 1600 },
+          { x: 1420, y: 750 },
+          { x: 2180, y: 1850 },
+          { x: 950, y: 1960 },
+          { x: 1420, y: 2460 },
+          { x: 2880, y: 1250 }
+        ];
+        const currentVentIdx = vents.findIndex(v => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 120);
+        const nextVent = vents[(currentVentIdx + 1) % vents.length];
+        setLocalPos({ x: nextVent.x, y: nextVent.y });
+        socket.emit('player_move', { roomId, x: nextVent.x, y: nextVent.y, isMoving: false, facingLeft: false });
       }
 
       // Toggle Mini-Map with [M]
@@ -1418,83 +1449,242 @@ export default function App() {
       ctx.restore();
 
       // =======================================================================
-      // CENTRAL HUB: GRAND ASSEMBLY ATRIUM & COMMAND DECK (x: 1340-2260, y: 1040-1660)
+      // THE SKELD: CAFETERIA & CENTRAL EMERGENCY DECK (x: 1340-2260, y: 1040-1660)
       // =======================================================================
-      const atriumGrad = ctx.createLinearGradient(1340, 1040, 2260, 1660);
-      atriumGrad.addColorStop(0, '#050e1e');
-      atriumGrad.addColorStop(0.5, '#0c1a32');
-      atriumGrad.addColorStop(1, '#050e1e');
-      ctx.fillStyle = atriumGrad;
+      // Authentic Skeld metal deck floor
+      ctx.fillStyle = '#627184';
       ctx.fillRect(1340, 1040, 920, 620);
-      ctx.strokeStyle = 'rgba(71,85,105,0.6)'; ctx.lineWidth = 8;
-      ctx.strokeRect(1340, 1040, 920, 620);
-      // Secondary bevel
-      ctx.strokeStyle = 'rgba(100,116,139,0.18)'; ctx.lineWidth = 2;
-      ctx.strokeRect(1346, 1046, 908, 608);
 
-      // Atrium floor radial lines
+      // Floor metal panel seams
+      ctx.strokeStyle = '#485566';
+      ctx.lineWidth = 2;
+      for (let px = 1340; px <= 2260; px += 115) {
+        ctx.beginPath();
+        ctx.moveTo(px, 1040);
+        ctx.lineTo(px, 1660);
+        ctx.stroke();
+      }
+      for (let py = 1040; py <= 1660; py += 103) {
+        ctx.beginPath();
+        ctx.moveTo(1340, py);
+        ctx.lineTo(2260, py);
+        ctx.stroke();
+      }
+
+      // Cafeteria thick boundary walls (The Skeld dark spaceship hull)
+      ctx.strokeStyle = '#222936';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(1340, 1040, 920, 620);
+      ctx.strokeStyle = '#384456';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(1345, 1045, 910, 610);
+
+      // Room Title
+      ctx.font = "900 18px 'Inter', sans-serif";
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.textAlign = 'center';
+      ctx.fillText('CAFETERIA', 1800, 1100);
+
+      // Helper function to draw authentic Skeld round dining tables with surrounding stools
+      const drawDiningTable = (tx, ty) => {
+        ctx.save();
+        // Stool positions around table
+        const stoolOffsets = [
+          { dx: -55, dy: 0 },
+          { dx: 55, dy: 0 },
+          { dx: 0, dy: -55 },
+          { dx: 0, dy: 55 }
+        ];
+        stoolOffsets.forEach((s) => {
+          // Stool shadow
+          ctx.beginPath();
+          ctx.arc(tx + s.dx, ty + s.dy + 3, 13, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.fill();
+          // Stool body
+          ctx.beginPath();
+          ctx.arc(tx + s.dx, ty + s.dy, 13, 0, Math.PI * 2);
+          ctx.fillStyle = '#475569';
+          ctx.fill();
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+          // Stool center bolt
+          ctx.beginPath();
+          ctx.arc(tx + s.dx, ty + s.dy, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fill();
+        });
+
+        // Table ground shadow
+        ctx.beginPath();
+        ctx.ellipse(tx, ty + 8, 44, 40, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fill();
+
+        // Table surface outer rim
+        ctx.beginPath();
+        ctx.arc(tx, ty, 42, 0, Math.PI * 2);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        // Inner table top (2-tone cell shaded)
+        ctx.beginPath();
+        ctx.arc(tx, ty, 35, 0, Math.PI * 2);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fill();
+
+        // Shaded half
+        ctx.save();
+        ctx.clip();
+        ctx.beginPath();
+        ctx.rect(tx - 35, ty, 70, 35);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fill();
+        ctx.restore();
+
+        // Center plate / bolts
+        ctx.beginPath();
+        ctx.arc(tx, ty, 10, 0, Math.PI * 2);
+        ctx.fillStyle = '#64748b';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+      };
+
+      // 4 Cafeteria Dining Tables
+      drawDiningTable(1520, 1220);
+      drawDiningTable(2080, 1220);
+      drawDiningTable(1520, 1480);
+      drawDiningTable(2080, 1480);
+
+      // Central Emergency Button Meeting Table at (1800, 1350)
       ctx.save();
-      for (let ri = 0; ri < 12; ri++) {
-        const ra = (ri / 12) * Math.PI * 2;
-        ctx.strokeStyle = `rgba(6,182,212,${0.04 + (ri % 2) * 0.02})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(1800, 1350); ctx.lineTo(1800 + Math.cos(ra) * 380, 1350 + Math.sin(ra) * 280); ctx.stroke();
+      ctx.translate(1800, 1350);
+
+      // Shadow
+      ctx.beginPath();
+      ctx.arc(0, 6, 68, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fill();
+
+      // Outer table base
+      ctx.beginPath();
+      ctx.arc(0, 0, 66, 0, Math.PI * 2);
+      ctx.fillStyle = '#475569';
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Hazard warning yellow/black diagonal ring
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = '#eab308';
+      ctx.fill();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 10;
+      for (let hx = -80; hx <= 80; hx += 16) {
+        ctx.beginPath();
+        ctx.moveTo(hx - 20, -70);
+        ctx.lineTo(hx + 20, 70);
+        ctx.stroke();
       }
       ctx.restore();
 
-      // Emergency Standup Beacon at (1800, 1350)
-      ctx.save();
-      ctx.translate(1800, 1350);
-      const beaconPlatGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 68);
-      beaconPlatGrad.addColorStop(0, '#1a2840'); beaconPlatGrad.addColorStop(1, '#080d18');
-      ctx.beginPath(); ctx.arc(0, 0, 68, 0, Math.PI * 2);
-      ctx.fillStyle = beaconPlatGrad; ctx.fill();
-      ctx.shadowColor = '#475569'; ctx.shadowBlur = 14;
-      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 4; ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      const pulseEmergency = Math.sin(time * 4) * 8;
+      // Inner steel platform
       ctx.beginPath();
-      ctx.arc(0, 0, 26 + pulseEmergency, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+      ctx.arc(0, 0, 48, 0, Math.PI * 2);
+      ctx.fillStyle = '#94a3b8';
       ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
 
+      // Red Emergency Button Pedestal
       ctx.beginPath();
-      ctx.arc(0, 0, 26, 0, Math.PI * 2);
+      ctx.arc(0, 0, 32, 0, Math.PI * 2);
+      ctx.fillStyle = '#7f1d1d';
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Pulsing Emergency Button itself
+      const pulseEmergency = Math.sin(time * 4) * 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24 + pulseEmergency, 0, Math.PI * 2);
       ctx.fillStyle = '#dc2626';
       ctx.fill();
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#b91c1c';
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.font = "bold 9px 'JetBrains Mono', monospace";
+      // White Specular Crescent on Button
+      ctx.beginPath();
+      ctx.ellipse(-5, -6, 10, 5, -0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fill();
+
+      // Protective Glass Dome
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.22)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Text label
+      ctx.font = "900 8px 'Inter', sans-serif";
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
-      ctx.fillText('STANDUP', 0, 4);
+      ctx.fillText('EMERGENCY', 0, 3);
+
       ctx.restore();
 
-      // Decontamination Wardrobe Pod at (1550, 1150)
+      // Decontamination Wardrobe Pod / Laptop Station at (1550, 1140)
       ctx.save();
-      ctx.translate(1550, 1150);
-      ctx.fillStyle = '#1e1b4b';
-      ctx.fillRect(-38, -48, 76, 96);
-      ctx.strokeStyle = '#818cf8';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(-38, -48, 76, 96);
-
-      const scanY = Math.sin(time * 3) * 38;
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2.5;
+      ctx.translate(1550, 1140);
+      // Wooden crate
       ctx.beginPath();
-      ctx.moveTo(-32, scanY);
-      ctx.lineTo(32, scanY);
+      ctx.roundRect(-24, -18, 48, 36, 4);
+      ctx.fillStyle = '#854d0e';
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
       ctx.stroke();
-
-      ctx.font = "bold 9px 'JetBrains Mono', monospace";
-      ctx.fillStyle = '#c7d2fe';
+      // Laptop open
+      ctx.beginPath();
+      ctx.roundRect(-14, -12, 28, 16, 2);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.font = "900 8px 'Inter', sans-serif";
+      ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
-      ctx.fillText('WARDROBE', 0, 62);
+      ctx.fillText('CUSTOMIZE', 0, 28);
       ctx.restore();
+
+      // Authentic Skeld Vents in room corners
+      drawVent(ctx, 2180, 1100, Math.hypot(localPos.x - 2180, localPos.y - 1100) < 60);
+      drawVent(ctx, 1390, 1600, Math.hypot(localPos.x - 1390, localPos.y - 1600) < 60);
+      drawVent(ctx, 1420, 750, Math.hypot(localPos.x - 1420, localPos.y - 750) < 60);
+      drawVent(ctx, 2180, 1850, Math.hypot(localPos.x - 2180, localPos.y - 1850) < 60);
+      drawVent(ctx, 950, 1960, Math.hypot(localPos.x - 950, localPos.y - 1960) < 60);
+      drawVent(ctx, 1420, 2460, Math.hypot(localPos.x - 1420, localPos.y - 2460) < 60);
+      drawVent(ctx, 2880, 1250, Math.hypot(localPos.x - 2880, localPos.y - 1250) < 60);
+      drawVent(ctx, 2880, 800, Math.hypot(localPos.x - 2880, localPos.y - 800) < 60);
 
       // =======================================================================
       // SPECIFIC BARRIERS: LOBBY LOCKDOWN FORCEFIELDS vs ACTIVE GAME CLEARANCE
@@ -1604,7 +1794,7 @@ export default function App() {
       });
 
       // =======================================================================
-      // DRAW AVENGERS HEROES & FALLEN HERO MEMORIAL RELICS
+      // DRAW AUTHENTIC CREWMATE BEANS & DEAD BODIES
       // =======================================================================
       // Combine remote players and local player
       const allRoster = [...playersRef.current];
@@ -1616,6 +1806,7 @@ export default function App() {
           id: socket.id,
           username,
           characterId: selectedHero,
+          hatId: selectedHat,
           color: heroObj.primaryColor,
           visorColor: heroObj.visorColor,
           operativeTitle: selectedTitle || heroObj.roleTitle,
@@ -1628,10 +1819,10 @@ export default function App() {
         });
       }
 
-      // 1. Draw Fallen Hero Relics on the deck floor for any eliminated/dead players
+      // 1. Draw Dead Bodies on the deck floor for any eliminated/dead players
       allRoster.forEach((p) => {
         if (!p.isAlive) {
-          drawFallenRelic(ctx, p.characterId || 'ironman', p.x, p.y, time);
+          drawDeadBody(ctx, p.characterId || 'red', p.x, p.y);
         }
       });
 
@@ -1646,27 +1837,37 @@ export default function App() {
         const isPlMoving = isLocal ? isMoving : p.isMoving;
         const isGhost = !p.isAlive;
         const pWalk = isPlMoving ? Math.sin(time * 12) * 4 : 0;
-        const heroObj = getHero(p.characterId || 'ironman');
+        const hatId = isLocal ? selectedHat : (p.hatId || 'none');
 
         ctx.save();
         ctx.translate(px, py);
 
-        // Procedural vector render for this specific Avenger (Iron Man, Cap, Thor, Hulk, etc.)
-        drawAvenger(ctx, p.characterId || 'ironman', pWalk, time, isPlMoving, isFacingLeft, isGhost, isLocal);
+        // Vector render authentic Innersloth Crewmate Bean with Hat & Visor
+        drawCrewmate(ctx, p.characterId || 'red', hatId, pWalk, time, isPlMoving, isFacingLeft, isGhost, isLocal);
 
         ctx.restore();
 
-        // Nametag & Hero Specialization Title (Drawn without scale inversion)
-        ctx.font = "bold 10px 'JetBrains Mono', monospace";
+        // Authentic Innersloth Outlined Nametag
+        ctx.save();
+        ctx.font = "900 12px 'Inter', -apple-system, sans-serif";
         ctx.textAlign = 'center';
 
         const isMafiaTeammate = myRole === 'MAFIA' && (p.role === 'MAFIA' || fellowMafia.includes(p.username));
-        ctx.fillStyle = isGhost ? 'rgba(148, 163, 184, 0.7)' : (isMafiaTeammate ? '#ef4444' : '#f8fafc');
-        ctx.fillText((isGhost ? '👻 ' : '') + p.username + (isLocal ? ' (YOU)' : ''), px, py - (isGhost ? 52 : 44));
+        const nametagY = py - (hatId !== 'none' ? 46 : 36);
 
-        ctx.font = "8px 'JetBrains Mono', monospace";
-        ctx.fillStyle = isGhost ? 'rgba(56, 189, 248, 0.6)' : heroObj.primaryColor;
-        ctx.fillText(`[${heroObj.name} • ${p.operativeTitle || heroObj.roleTitle}]`, px, py - (isGhost ? 42 : 34));
+        const displayName = (isGhost ? '👻 ' : '') + p.username + (isLocal ? ' (YOU)' : '');
+
+        // Thick black comic stroke outline
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#000000';
+        ctx.lineJoin = 'round';
+        ctx.strokeText(displayName, px, nametagY);
+
+        // Name fill color
+        ctx.fillStyle = isGhost ? 'rgba(203, 213, 225, 0.85)' : (isMafiaTeammate ? '#ef4444' : '#ffffff');
+        ctx.fillText(displayName, px, nametagY);
+
+        ctx.restore();
       });
 
       // =======================================================================
@@ -1773,7 +1974,7 @@ export default function App() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [localPos, terminals, myRole, phase, roomId, username, selectedColor, selectedVisor, selectedTitle, selectedHero, playerSpeed]);
+  }, [localPos, terminals, myRole, phase, roomId, username, selectedColor, selectedVisor, selectedTitle, selectedHero, selectedHat, playerSpeed]);
 
   // =========================================================================
   // VIEW: AIRLOCK LOGIN (Entry / Server Config)
@@ -1864,7 +2065,8 @@ export default function App() {
                 color: heroObj.primaryColor,
                 visorColor: heroObj.visorColor,
                 operativeTitle: selectedTitle || heroObj.roleTitle,
-                characterId: selectedHero
+                characterId: selectedHero,
+                hatId: selectedHat
               });
               setInRoom(true);
             }}
@@ -1939,79 +2141,111 @@ export default function App() {
               )}
             </div>
 
-            {/* Callsign */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>OPERATIVE CALLSIGN</label>
-                <button
-                  type="button"
-                  onClick={() => setUsername(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)])}
-                  style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
-                >
-                  <Dices size={12} /> Randomize
-                </button>
+            {/* Crewmate Preview & Callsign */}
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', backgroundColor: '#090d16', padding: '12px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+              <div style={{ width: '90px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#030712', borderRadius: '8px', border: '1px solid #334155' }}>
+                <CrewmatePreview colorId={selectedHero} hatId={selectedHat} width={80} height={100} isMoving={true} />
               </div>
-              <input
-                type="text"
-                required
-                maxLength={18}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box' }}
-              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>CREWMATE CALLSIGN</label>
+                  <button
+                    type="button"
+                    onClick={() => setUsername(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)])}
+                    style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                  >
+                    <Dices size={12} /> Randomize
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  maxLength={18}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '14px', fontWeight: 700, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                />
+              </div>
             </div>
 
-            {/* Select Avengers Hero */}
+            {/* Select Among Us Color */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
-                  CHOOSE YOUR AVENGERS HERO
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, letterSpacing: '1px' }}>
+                  CREWMATE SUIT COLOR: <span style={{ color: getCrewmateColor(selectedHero).hex }}>{getCrewmateColor(selectedHero).name.toUpperCase()}</span>
                 </label>
-                <span style={{ fontSize: '10px', color: selectedHeroObj.primaryColor, fontWeight: 700 }}>
-                  {selectedHeroObj.name} ({selectedHeroObj.alias})
-                </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
-                {AVENGERS_HEROES.map((h) => {
-                  const isSel = selectedHero === h.id;
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                {CREWMATE_COLORS.map((c) => {
+                  const isSel = selectedHero === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedHero(c.id);
+                        setSelectedColor(c.hex);
+                        setSelectedVisor('#98d0e1');
+                        localStorage.setItem('amongus_color', c.id);
+                        localStorage.setItem('code_mafia_hero', c.id);
+                      }}
+                      style={{
+                        height: '34px',
+                        borderRadius: '6px',
+                        backgroundColor: c.hex,
+                        border: isSel ? '3px solid #ffffff' : '2px solid rgba(0,0,0,0.6)',
+                        boxShadow: isSel ? '0 0 10px #ffffff' : 'none',
+                        cursor: 'pointer',
+                        transform: isSel ? 'scale(1.08)' : 'scale(1)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={c.name}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Select Among Us Hat */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, letterSpacing: '1px' }}>
+                  EQUIP HAT: <span style={{ color: '#38bdf8' }}>{CREWMATE_HATS.find(h => h.id === selectedHat)?.name.toUpperCase() || 'NO HAT'}</span>
+                </label>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                {CREWMATE_HATS.map((h) => {
+                  const isSel = selectedHat === h.id;
                   return (
                     <button
                       key={h.id}
                       type="button"
                       onClick={() => {
-                        setSelectedHero(h.id);
-                        setSelectedColor(h.primaryColor);
-                        setSelectedVisor(h.visorColor);
-                        setSelectedTitle(h.roleTitle);
-                        localStorage.setItem('code_mafia_hero', h.id);
+                        setSelectedHat(h.id);
+                        localStorage.setItem('amongus_hat', h.id);
                       }}
                       style={{
-                        padding: '8px 6px',
-                        borderRadius: '8px',
-                        backgroundColor: isSel ? 'rgba(30, 41, 59, 0.95)' : '#090d16',
-                        border: isSel ? `2px solid ${h.primaryColor}` : '1px solid #1e293b',
-                        boxShadow: isSel ? `0 0 12px ${h.glowColor}` : 'none',
+                        padding: '6px 4px',
+                        borderRadius: '6px',
+                        backgroundColor: isSel ? '#1e293b' : '#090d16',
+                        border: isSel ? '2px solid #38bdf8' : '1px solid #1e293b',
+                        color: '#fff',
+                        fontSize: '11px',
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '3px',
+                        gap: '2px',
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <span style={{ fontSize: '20px' }}>{h.iconEmoji}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: isSel ? '#ffffff' : '#cbd5e1' }}>
+                      <span style={{ fontSize: '18px' }}>{h.emoji}</span>
+                      <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '52px' }}>
                         {h.name}
-                      </span>
-                      <span style={{ fontSize: '9px', color: h.primaryColor, fontWeight: 600 }}>
-                        {h.alias}
                       </span>
                     </button>
                   );
                 })}
-              </div>
-              <div style={{ marginTop: '6px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>
-                "{selectedHeroObj.quote}"
               </div>
             </div>
 
@@ -2050,7 +2284,7 @@ export default function App() {
                   boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)'
                 }}
               >
-                ENTER DREADNOUGHT WAITING DECK ➔
+                ENTER THE SKELD WAITING DECK ➔
               </button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
@@ -2138,10 +2372,9 @@ export default function App() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px', fontWeight: 900, color: '#38bdf8' }}>CODE</span>
-            <span style={{ fontSize: '18px', fontWeight: 900, color: '#ef4444' }}>MAFIA</span>
-            <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>// DREADNOUGHT</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '19px', fontWeight: 900, color: '#f8fafc', letterSpacing: '1px' }}>AMONG <span style={{ color: '#ef4444' }}>US</span></span>
+            <span style={{ fontSize: '10px', color: '#38bdf8', marginLeft: '2px', fontWeight: 800 }}>// THE SKELD</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#0f172a', padding: '4px 10px', borderRadius: '6px', border: '1px solid #1e293b' }}>
@@ -2394,6 +2627,243 @@ export default function App() {
           }}
         />
 
+        {/* Authentic Top-Left TOTAL TASKS COMPLETED Progress Bar */}
+        {phase !== 'LOBBY' && phase !== 'VOTING' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '16px',
+              width: '280px',
+              zIndex: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'rgba(5, 46, 22, 0.94)',
+                border: '3px solid #14532d',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.7)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#ffffff', letterSpacing: '0.8px', fontFamily: "'Inter', sans-serif" }}>
+                  TOTAL TASKS COMPLETED
+                </span>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#4ade80' }}>
+                  {solvedCount}/{totalTerminals}
+                </span>
+              </div>
+              <div
+                style={{
+                  height: '14px',
+                  backgroundColor: '#052e16',
+                  borderRadius: '4px',
+                  border: '1.5px solid #166534',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.min(100, Math.round((solvedCount / Math.max(1, totalTerminals)) * 100))}%`,
+                    backgroundColor: '#22c55e',
+                    boxShadow: '0 0 10px #22c55e',
+                    transition: 'width 0.4s ease'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Task list preview */}
+            <div
+              style={{
+                backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '6px',
+                padding: '6px 10px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '3px'
+              }}
+            >
+              {terminals.slice(0, 3).map((t) => (
+                <div key={t.id} style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: t.solved ? '#22c55e' : (t.sabotaged ? '#ef4444' : '#facc15') }}>
+                    {t.solved ? '✔' : '•'}
+                  </span>
+                  <span style={{ color: t.solved ? '#86efac' : (t.sabotaged ? '#fca5a5' : '#fef08a'), fontWeight: 600 }}>
+                    {t.roomName.split('(')[0]}: {t.functionName}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Authentic Circular Among Us Action Buttons (USE, REPORT, KILL, VENT) */}
+        {phase !== 'VOTING' && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '16px',
+              right: '16px',
+              zIndex: 20,
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-end'
+            }}
+          >
+            {/* VENT Button (Impostor/Mafia only) */}
+            {myRole === 'MAFIA' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const vents = [
+                    { x: 2180, y: 1100 },
+                    { x: 1390, y: 1600 },
+                    { x: 1420, y: 750 },
+                    { x: 2180, y: 1850 },
+                    { x: 950, y: 1960 },
+                    { x: 1420, y: 2460 },
+                    { x: 2880, y: 1250 }
+                  ];
+                  const currentVentIdx = vents.findIndex(v => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 120);
+                  const nextVent = vents[(currentVentIdx + 1) % vents.length];
+                  setLocalPos({ x: nextVent.x, y: nextVent.y });
+                  socket.emit('player_move', { roomId, x: nextVent.x, y: nextVent.y, isMoving: false, facingLeft: false });
+                }}
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  backgroundColor: '#1e1b4b',
+                  border: '3px solid #8b5cf6',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 0 16px rgba(139, 92, 246, 0.4)',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Teleport through ventilation shafts [V]"
+              >
+                <span style={{ fontSize: '18px' }}>💨</span>
+                <span style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '0.5px' }}>VENT [V]</span>
+              </button>
+            )}
+
+            {/* KILL / SABOTAGE Button (Impostor/Mafia in Night phase) */}
+            {myRole === 'MAFIA' && phase === 'NIGHT' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (nearbyAction && nearbyAction.type === 'terminal') {
+                    socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id });
+                  }
+                }}
+                style={{
+                  width: '74px',
+                  height: '74px',
+                  borderRadius: '50%',
+                  backgroundColor: '#7f1d1d',
+                  border: '4px solid #ef4444',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 0 20px rgba(239, 68, 68, 0.6)',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Sabotage Subsystems / Eliminate [Q]"
+              >
+                <Skull size={24} color="#ffffff" />
+                <span style={{ fontSize: '9px', fontWeight: 900, marginTop: '2px' }}>KILL [Q]</span>
+              </button>
+            )}
+
+            {/* REPORT Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (phase === 'DAY') {
+                  socket.emit('call_emergency', { roomId });
+                }
+              }}
+              style={{
+                width: '74px',
+                height: '74px',
+                borderRadius: '50%',
+                backgroundColor: phase === 'DAY' ? '#dc2626' : '#334155',
+                border: phase === 'DAY' ? '4px solid #f87171' : '3px solid #64748b',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: phase === 'DAY' ? 'pointer' : 'not-allowed',
+                boxShadow: phase === 'DAY' ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none',
+                opacity: phase === 'DAY' ? 1 : 0.6,
+                transition: 'all 0.15s ease'
+              }}
+              title="Report Dead Body / Emergency Meeting [R]"
+            >
+              <Megaphone size={24} color="#ffffff" />
+              <span style={{ fontSize: '9px', fontWeight: 900, marginTop: '2px' }}>REPORT [R]</span>
+            </button>
+
+            {/* USE Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!nearbyAction) return;
+                if (nearbyAction.type === 'terminal') {
+                  const term = terminals.find((t) => t.id === nearbyAction.id);
+                  if (term) {
+                    setActiveTerminal(term);
+                    setTerminalCode(term.code || term.starterCode);
+                    setTestResults(null);
+                  }
+                } else if (nearbyAction.type === 'wardrobe') {
+                  setShowWardrobe(true);
+                } else if (nearbyAction.type === 'emergency') {
+                  if (phase === 'DAY') socket.emit('call_emergency', { roomId });
+                }
+              }}
+              style={{
+                width: '74px',
+                height: '74px',
+                borderRadius: '50%',
+                backgroundColor: nearbyAction ? '#0284c7' : '#1e293b',
+                border: nearbyAction ? '4px solid #38bdf8' : '3px solid #475569',
+                color: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: nearbyAction ? 'pointer' : 'default',
+                boxShadow: nearbyAction ? '0 0 24px rgba(56, 189, 248, 0.6)' : 'none',
+                opacity: nearbyAction ? 1 : 0.55,
+                transition: 'all 0.15s ease'
+              }}
+              title="Interact with terminal, customize pod, or emergency button [E]"
+            >
+              <span style={{ fontSize: '20px' }}>⚡</span>
+              <span style={{ fontSize: '10px', fontWeight: 900, marginTop: '2px' }}>USE [E]</span>
+            </button>
+          </div>
+        )}
+
         {/* Floating Contextual Interaction Pill */}
         {nearbyAction && activeTerminal === null && phase !== 'VOTING' && (
           <div
@@ -2402,7 +2872,7 @@ export default function App() {
               bottom: '24px',
               left: '50%',
               transform: 'translateX(-50%)',
-              padding: '12px 24px',
+              padding: '10px 20px',
               backgroundColor: 'rgba(15, 23, 42, 0.95)',
               border: nearbyAction.type === 'emergency' ? '2px solid #ef4444' : '2px solid #38bdf8',
               borderRadius: '30px',
@@ -2416,87 +2886,6 @@ export default function App() {
             <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
               {nearbyAction.name}
             </span>
-
-            {nearbyAction.type === 'terminal' && (
-              <button
-                onClick={() => {
-                  const term = terminals.find((t) => t.id === nearbyAction.id);
-                  if (term) {
-                    setActiveTerminal(term);
-                    setTerminalCode(term.code || term.starterCode);
-                    setTestResults(null);
-                  }
-                }}
-                style={{
-                  padding: '6px 14px',
-                  backgroundColor: '#0284c7',
-                  border: 'none',
-                  borderRadius: '20px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                [E] OPEN MONACO IDE
-              </button>
-            )}
-
-            {nearbyAction.type === 'terminal' && myRole === 'MAFIA' && phase === 'NIGHT' && (
-              <button
-                onClick={() => socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id })}
-                style={{
-                  padding: '6px 14px',
-                  backgroundColor: '#dc2626',
-                  border: 'none',
-                  borderRadius: '20px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                [Q] SABOTAGE
-              </button>
-            )}
-
-            {nearbyAction.type === 'wardrobe' && (
-              <button
-                onClick={() => setShowWardrobe(true)}
-                style={{
-                  padding: '6px 14px',
-                  backgroundColor: '#6366f1',
-                  border: 'none',
-                  borderRadius: '20px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                [E] CUSTOMIZE SUIT
-              </button>
-            )}
-
-            {nearbyAction.type === 'emergency' && (
-              <button
-                onClick={() => {
-                  if (phase === 'DAY') socket.emit('call_emergency', { roomId });
-                }}
-                style={{
-                  padding: '6px 14px',
-                  backgroundColor: '#dc2626',
-                  border: 'none',
-                  borderRadius: '20px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                [E] CALL EMERGENCY MEETING
-              </button>
-            )}
           </div>
         )}
 
@@ -2770,17 +3159,17 @@ export default function App() {
         >
           <div
             style={{
-              width: '460px',
+              width: '540px',
               backgroundColor: '#0f172a',
-              border: '1px solid #38bdf8',
-              borderRadius: '12px',
+              border: '2px solid #38bdf8',
+              borderRadius: '16px',
               padding: '24px',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.9), 0 0 30px rgba(56, 189, 248, 0.2)'
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.9), 0 0 30px rgba(56, 189, 248, 0.25)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '12px', marginBottom: '18px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 800, color: '#38bdf8' }}>
-                TACTICAL WARDROBE // ARMOR CUSTOMIZER
+              <span style={{ fontSize: '15px', fontWeight: 900, color: '#38bdf8', letterSpacing: '1px' }}>
+                CREWMATE CUSTOMIZER // LAPTOP
               </span>
               <button
                 onClick={() => setShowWardrobe(false)}
@@ -2790,104 +3179,169 @@ export default function App() {
               </button>
             </div>
 
-            {/* Avengers Hero Selection */}
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
-                  CHOOSE AVENGERS HERO
-                </label>
-                <span style={{ fontSize: '11px', color: selectedHeroObj.primaryColor, fontWeight: 800 }}>
-                  {selectedHeroObj.name} ({selectedHeroObj.alias})
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+              {/* Left: Live Crewmate Preview */}
+              <div
+                style={{
+                  width: '140px',
+                  backgroundColor: '#090d16',
+                  border: '1px solid #334155',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 6px'
+                }}
+              >
+                <CrewmatePreview colorId={selectedHero} hatId={selectedHat} width={110} height={130} isMoving={true} />
+                <span style={{ fontSize: '12px', fontWeight: 900, color: getCrewmateColor(selectedHero).hex, marginTop: '4px' }}>
+                  {getCrewmateColor(selectedHero).name}
+                </span>
+                <span style={{ fontSize: '10px', color: '#94a3b8' }}>
+                  {CREWMATE_HATS.find(h => h.id === selectedHat)?.name || 'No Hat'}
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '210px', overflowY: 'auto', paddingRight: '4px' }}>
-                {AVENGERS_HEROES.map((h) => {
-                  const isSel = selectedHero === h.id;
-                  return (
-                    <button
-                      key={h.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedHero(h.id);
-                        setSelectedColor(h.primaryColor);
-                        setSelectedVisor(h.visorColor);
-                        setSelectedTitle(h.roleTitle);
-                        localStorage.setItem('code_mafia_hero', h.id);
-                        socket.emit('update_appearance', {
-                          roomId,
-                          color: h.primaryColor,
-                          visorColor: h.visorColor,
-                          operativeTitle: h.roleTitle,
-                          characterId: h.id
-                        });
-                      }}
-                      style={{
-                        padding: '8px 6px',
-                        borderRadius: '8px',
-                        backgroundColor: isSel ? 'rgba(30, 41, 59, 0.95)' : '#090d16',
-                        border: isSel ? `2px solid ${h.primaryColor}` : '1px solid #1e293b',
-                        boxShadow: isSel ? `0 0 12px ${h.glowColor}` : 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '3px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <span style={{ fontSize: '20px' }}>{h.iconEmoji}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: isSel ? '#ffffff' : '#cbd5e1' }}>
-                        {h.name}
-                      </span>
-                      <span style={{ fontSize: '9px', color: h.primaryColor, fontWeight: 600 }}>
-                        {h.alias}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* Operative Title */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '8px' }}>
-                HERO SPECIALIZATION TITLE
-              </label>
-              <select
-                value={selectedTitle}
-                onChange={(e) => {
-                  setSelectedTitle(e.target.value);
-                  socket.emit('update_appearance', {
-                    roomId,
-                    color: selectedHeroObj.primaryColor,
-                    visorColor: selectedHeroObj.visorColor,
-                    operativeTitle: e.target.value,
-                    characterId: selectedHero
-                  });
-                }}
-                style={{ width: '100%', padding: '8px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '12px' }}
-              >
-                {OPERATIVE_TITLES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+              {/* Right: Colors & Hats Grid */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* 12 Colors */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.8px', marginBottom: '6px' }}>
+                    SUIT COLOR
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                    {CREWMATE_COLORS.map((c) => {
+                      const isSel = selectedHero === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedHero(c.id);
+                            setSelectedColor(c.hex);
+                            setSelectedVisor('#98d0e1');
+                            localStorage.setItem('amongus_color', c.id);
+                            localStorage.setItem('code_mafia_hero', c.id);
+                            socket.emit('update_appearance', {
+                              roomId,
+                              color: c.hex,
+                              visorColor: '#98d0e1',
+                              operativeTitle: selectedTitle,
+                              characterId: c.id,
+                              hatId: selectedHat
+                            });
+                          }}
+                          style={{
+                            height: '28px',
+                            borderRadius: '6px',
+                            backgroundColor: c.hex,
+                            border: isSel ? '3px solid #ffffff' : '1px solid rgba(0,0,0,0.6)',
+                            boxShadow: isSel ? '0 0 10px #ffffff' : 'none',
+                            cursor: 'pointer',
+                            transform: isSel ? 'scale(1.1)' : 'scale(1)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title={c.name}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 10 Hats */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.8px', marginBottom: '6px' }}>
+                    EQUIP HAT
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                    {CREWMATE_HATS.map((h) => {
+                      const isSel = selectedHat === h.id;
+                      return (
+                        <button
+                          key={h.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedHat(h.id);
+                            localStorage.setItem('amongus_hat', h.id);
+                            socket.emit('update_appearance', {
+                              roomId,
+                              color: getCrewmateColor(selectedHero).hex,
+                              visorColor: '#98d0e1',
+                              operativeTitle: selectedTitle,
+                              characterId: selectedHero,
+                              hatId: h.id
+                            });
+                          }}
+                          style={{
+                            padding: '6px 2px',
+                            borderRadius: '6px',
+                            backgroundColor: isSel ? '#1e293b' : '#090d16',
+                            border: isSel ? '2px solid #38bdf8' : '1px solid #1e293b',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '2px'
+                          }}
+                        >
+                          <span style={{ fontSize: '16px' }}>{h.emoji}</span>
+                          <span style={{ fontSize: '8px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '44px' }}>
+                            {h.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Role Title */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.8px', marginBottom: '4px' }}>
+                    CREW TITLE
+                  </label>
+                  <select
+                    value={selectedTitle}
+                    onChange={(e) => {
+                      setSelectedTitle(e.target.value);
+                      socket.emit('update_appearance', {
+                        roomId,
+                        color: getCrewmateColor(selectedHero).hex,
+                        visorColor: '#98d0e1',
+                        operativeTitle: e.target.value,
+                        characterId: selectedHero,
+                        hatId: selectedHat
+                      });
+                    }}
+                    style={{ width: '100%', padding: '6px 10px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '11px' }}
+                  >
+                    {OPERATIVE_TITLES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             <button
               onClick={() => setShowWardrobe(false)}
               style={{
                 width: '100%',
-                padding: '10px',
+                padding: '12px',
                 backgroundColor: '#0284c7',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 color: '#fff',
-                fontWeight: 700,
+                fontWeight: 800,
                 fontSize: '12px',
-                cursor: 'pointer'
+                letterSpacing: '1px',
+                cursor: 'pointer',
+                boxShadow: '0 0 16px rgba(56, 189, 248, 0.4)'
               }}
             >
-              SAVE & CLOSE WARDROBE
+              SAVE & RETURN TO THE SKELD
             </button>
           </div>
         </div>
@@ -3094,42 +3548,65 @@ export default function App() {
         >
           {/* Voting Header */}
           <div style={{ textAlign: 'center', marginBottom: '18px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', fontSize: '12px', fontWeight: 800, marginBottom: '8px' }}>
-              <AlertTriangle size={14} /> EMERGENCY LOCKDOWN MEETING // TIME REMAINING: {timer}s
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '20px', backgroundColor: 'rgba(239, 68, 68, 0.25)', border: '2px solid #ef4444', color: '#f87171', fontSize: '12px', fontWeight: 900, letterSpacing: '1px', marginBottom: '8px' }}>
+              <AlertTriangle size={15} /> EMERGENCY MEETING // TIME REMAINING: {timer}s
             </div>
-            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#f8fafc' }}>
-              DEDUCE THE INFILTRATORS
+            <h2 style={{ margin: 0, fontSize: '32px', fontWeight: 900, color: '#f8fafc', letterSpacing: '1px', textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>
+              Who Is The Impostor?
             </h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
-              Caller: <span style={{ color: '#38bdf8' }}>{emergencyCaller || 'Station Power Grid'}</span>. Cast your ballot or skip vote.
+            <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+              Called by: <span style={{ color: '#38bdf8', fontWeight: 700 }}>{emergencyCaller || 'Emergency Button'}</span>. Vote out the suspect or skip.
             </p>
           </div>
 
           {/* Voting Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', width: '100%', maxWidth: '840px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', width: '100%', maxWidth: '880px', marginBottom: '20px' }}>
             {players.filter((p) => p.isAlive).map((suspect) => {
               const hasVoted = Boolean(suspect.votedFor);
               return (
                 <div
                   key={suspect.id}
                   style={{
-                    padding: '16px',
+                    padding: '12px',
                     backgroundColor: votedSuspect === suspect.id ? '#1e293b' : '#0f172a',
-                    border: votedSuspect === suspect.id ? '2px solid #38bdf8' : '1px solid #334155',
-                    borderRadius: '10px',
+                    border: votedSuspect === suspect.id ? '2px solid #38bdf8' : '2px solid #334155',
+                    borderRadius: '12px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '8px',
-                    position: 'relative'
+                    gap: '6px',
+                    position: 'relative',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.6)'
                   }}
                 >
-                  <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: suspect.color }} />
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
+                  {/* Red VOTED Stamp */}
+                  {hasVoted && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        padding: '2px 6px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        border: '2px solid #ef4444',
+                        color: '#ef4444',
+                        fontSize: '9px',
+                        fontWeight: 900,
+                        borderRadius: '4px',
+                        transform: 'rotate(12deg)',
+                        letterSpacing: '1px'
+                      }}
+                    >
+                      VOTED
+                    </div>
+                  )}
+
+                  <div style={{ width: '60px', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CrewmatePreview colorId={suspect.characterId || 'red'} hatId={suspect.hatId || 'none'} width={54} height={64} isMoving={false} />
+                  </div>
+
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {suspect.username} {suspect.id === socket.id && '(YOU)'}
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#64748b' }}>
-                    {hasVoted ? '✓ Ballot Cast' : 'Thinking...'}
                   </span>
 
                   {suspect.id !== socket.id && !votedSuspect && (
@@ -3142,16 +3619,17 @@ export default function App() {
                         width: '100%',
                         padding: '8px',
                         marginTop: '4px',
-                        backgroundColor: '#dc2626',
-                        border: 'none',
+                        backgroundColor: '#16a34a',
+                        border: '1px solid #22c55e',
                         borderRadius: '6px',
                         color: '#fff',
                         fontSize: '11px',
-                        fontWeight: 800,
-                        cursor: 'pointer'
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        boxShadow: '0 0 10px rgba(34, 197, 94, 0.4)'
                       }}
                     >
-                      VOTE SUSPECT 🎯
+                      VOTE SUSPECT ✔
                     </button>
                   )}
                 </div>
@@ -3167,18 +3645,20 @@ export default function App() {
                 socket.emit('cast_vote', { roomId, suspectId: 'SKIP' });
               }}
               style={{
-                padding: '10px 24px',
-                backgroundColor: '#334155',
-                border: '1px solid #64748b',
+                padding: '10px 28px',
+                backgroundColor: '#1e293b',
+                border: '2px solid #475569',
                 borderRadius: '8px',
                 color: '#f8fafc',
                 fontSize: '12px',
-                fontWeight: 800,
+                fontWeight: 900,
+                letterSpacing: '0.8px',
                 cursor: 'pointer',
-                marginBottom: '16px'
+                marginBottom: '16px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
               }}
             >
-              SKIP BALLOT / INSUFFICIENT EVIDENCE
+              SKIP VOTE / NO ONE EJECTED
             </button>
           )}
 
