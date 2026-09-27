@@ -205,114 +205,112 @@ const WALKABLE_BOXES = [
 const CLIENT_TERMINALS = [
   {
     id: 'terminal-1',
-    name: 'Terminal 1 // Hyperspace Matrix Rotation',
+    name: 'Terminal 1 // Navigation Warp Calibration',
     roomName: 'Command Bridge (Sector 1 - North)',
     x: 1800,
     y: 400,
     solved: false,
     sabotaged: false,
-    functionName: 'rotateMatrix90',
-    description: 'The navigation telemetry matrix must be rotated 90 degrees clockwise to align with the jump gate. Implement rotateMatrix90(matrix) without mutating the input.',
-    starterCode: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
-    code: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
+    functionName: 'calculateJumpDistance',
+    description: 'Calibrate the warp jump engine. Return the warp jump distance by multiplying the energy charge (energy) by the engine velocity (velocity).',
+    starterCode: `function calculateJumpDistance(energy, velocity) {\n  // FIX: Change subtraction (-) to multiplication (*)\n  return energy - velocity;\n}`,
+    code: `function calculateJumpDistance(energy, velocity) {\n  // FIX: Change subtraction (-) to multiplication (*)\n  return energy - velocity;\n}`,
     tests: [
-      { input: [[[1, 2], [3, 4]]], expected: [[3, 1], [4, 2]] },
-      { input: [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]], expected: [[7, 4, 1], [8, 5, 2], [9, 6, 3]] },
-      { input: [[[5]]], expected: [[5]] }
+      { input: [10, 5], expected: 50 },
+      { input: [4, 8], expected: 32 },
+      { input: [7, 0], expected: 0 }
     ]
   },
   {
     id: 'terminal-2',
-    name: 'Terminal 2 // LRU Cache Eviction',
+    name: 'Terminal 2 // Reactor Coolant Safety Check',
     roomName: 'AI & Quantum Mainframe (Sector 2 - North-West)',
     x: 650,
     y: 500,
     solved: false,
     sabotaged: false,
-    functionName: 'evictStaleKeys',
-    description: 'The AI core memory buffer has stale telemetry keys. Implement evictStaleKeys(cache, maxAge) that removes all key-value entries with age > maxAge and returns the cleaned object.',
-    starterCode: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
-    code: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
+    functionName: 'isTemperatureSafe',
+    description: 'Verify if the reactor coolant temperature is within safe operating limits. Return true if temperature is between minTemp and maxTemp (inclusive), otherwise return false.',
+    starterCode: `function isTemperatureSafe(temperature, minTemp, maxTemp) {\n  // FIX: Return true only if temperature >= minTemp && temperature <= maxTemp\n  return temperature > maxTemp;\n}`,
+    code: `function isTemperatureSafe(temperature, minTemp, maxTemp) {\n  // FIX: Return true only if temperature >= minTemp && temperature <= maxTemp\n  return temperature > maxTemp;\n}`,
     tests: [
-      { input: [{ telemetry_a: 15, telemetry_b: 45, telemetry_c: 5 }, 20], expected: { telemetry_a: 15, telemetry_c: 5 } },
-      { input: [{ ping: 100, pong: 200 }, 50], expected: {} },
-      { input: [{ node_x: 2, node_y: 4 }, 10], expected: { node_x: 2, node_y: 4 } }
+      { input: [75, 50, 100], expected: true },
+      { input: [120, 50, 100], expected: false },
+      { input: [30, 50, 100], expected: false },
+      { input: [50, 50, 100], expected: true }
     ]
   },
   {
     id: 'terminal-3',
-    name: 'Terminal 3 // Signal Packet Defragmenter',
+    name: 'Terminal 3 // Distress Beacon Broadcaster',
     roomName: 'Communications & Sensor Array (Sector 3 - North-East)',
     x: 2950,
     y: 500,
     solved: false,
     sabotaged: false,
-    functionName: 'defragmentPackets',
-    description: 'The deep-space radio array received fragmented packets out of order. Implement defragmentPackets(packets) to sort packets by their .seq number and concatenate their .data strings into one message.',
-    starterCode: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
-    code: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
+    functionName: 'formatDistressSignal',
+    description: 'Format the emergency distress signal into capital letters so all allied fleet ships can decode the transmission.',
+    starterCode: `function formatDistressSignal(signal) {\n  // FIX: Convert signal string to uppercase with .toUpperCase()\n  return signal.toLowerCase();\n}`,
+    code: `function formatDistressSignal(signal) {\n  // FIX: Convert signal string to uppercase with .toUpperCase()\n  return signal.toLowerCase();\n}`,
     tests: [
-      { input: [[{ seq: 3, data: 'WORLD' }, { seq: 1, data: 'HELLO ' }, { seq: 2, data: 'SPACESHIP ' }]], expected: 'HELLO SPACESHIP WORLD' },
-      { input: [[{ seq: 2, data: '9' }, { seq: 1, data: 'AETHER-' }]], expected: 'AETHER-9' },
-      { input: [[{ seq: 1, data: 'BEACON_ONLINE' }]], expected: 'BEACON_ONLINE' }
+      { input: ['sos skeld'], expected: 'SOS SKELD' },
+      { input: ['infiltrator detected'], expected: 'INFILTRATOR DETECTED' },
+      { input: ['reactor ok'], expected: 'REACTOR OK' }
     ]
   },
   {
     id: 'terminal-4',
-    name: 'Terminal 4 // Cryptographic Checksum Validator',
+    name: 'Terminal 4 // Security Airlock Passcode',
     roomName: 'Security & Surveillance Vault (Sector 4 - West)',
     x: 550,
     y: 1450,
     solved: false,
     sabotaged: false,
-    functionName: 'validateSecurityChecksum',
-    description: 'The security vault airlock requires a parity checksum. Write validateSecurityChecksum(str) to return true if the sum of ASCII character codes is even, and false if odd.',
-    starterCode: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
-    code: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
+    functionName: 'validateAirlockCode',
+    description: 'Validate the security airlock keycode. Return true if code length is at least 4 characters AND code does not equal "sabotage".',
+    starterCode: `function validateAirlockCode(code) {\n  // FIX: Return true if code.length >= 4 and code !== 'sabotage'\n  return code.length > 20;\n}`,
+    code: `function validateAirlockCode(code) {\n  // FIX: Return true if code.length >= 4 and code !== 'sabotage'\n  return code.length > 20;\n}`,
     tests: [
-      { input: ['AB'], expected: false },
-      { input: ['AA'], expected: true },
-      { input: ['SECURITY'], expected: true },
-      { input: ['CYBER'], expected: false },
-      { input: ['VAULT'], expected: true }
+      { input: ['skeld99'], expected: true },
+      { input: ['key'], expected: false },
+      { input: ['sabotage'], expected: false },
+      { input: ['vault_open'], expected: true }
     ]
   },
   {
     id: 'terminal-5',
-    name: 'Terminal 5 // Gene Sequence Splicer',
+    name: 'Terminal 5 // MedBay Sample Purifier',
     roomName: 'Cybernetics & Bio-Lab (Sector 5 - East)',
     x: 3050,
     y: 1450,
     solved: false,
     sabotaged: false,
-    functionName: 'spliceNucleotides',
-    description: 'The bio-lab stasis gene requires splicing. Implement spliceNucleotides(dna, target) which returns the count of times target substring appears in the dna strand without overlapping.',
-    starterCode: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
-    code: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
+    functionName: 'countCleanSamples',
+    description: 'Filter test samples in the centrifuge. Return the total count of samples in the array that equal "clean".',
+    starterCode: `function countCleanSamples(samples) {\n  // FIX: Change 'infected' to 'clean' to count sterile test tubes\n  return samples.filter(s => s === 'infected').length;\n}`,
+    code: `function countCleanSamples(samples) {\n  // FIX: Change 'infected' to 'clean' to count sterile test tubes\n  return samples.filter(s => s === 'infected').length;\n}`,
     tests: [
-      { input: ['ATCGATCGATCG', 'ATCG'], expected: 3 },
-      { input: ['AAAA', 'AA'], expected: 2 },
-      { input: ['GCATGC', 'XYZ'], expected: 0 },
-      { input: ['CGCGCGC', 'CGC'], expected: 2 }
+      { input: [['clean', 'infected', 'clean']], expected: 2 },
+      { input: [['infected', 'infected']], expected: 0 },
+      { input: [['clean', 'clean', 'clean']], expected: 3 }
     ]
   },
   {
     id: 'terminal-6',
-    name: 'Terminal 6 // Plasma Pressure Balancer',
+    name: 'Terminal 6 // Shield Power Energy Diverter',
     roomName: 'Quantum Hyper-Reactor Core (Sector 6 - South)',
     x: 1800,
     y: 2250,
     solved: false,
     sabotaged: false,
-    functionName: 'convergePlasmaFrequency',
-    description: 'The quantum reactor core requires balancing. Write convergePlasmaFrequency(base, target) to return the minimum number of step adjustments needed to reach target if each step can multiply by 2 or add 1 (starting at base).',
-    starterCode: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
-    code: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
+    functionName: 'sumShieldEnergy',
+    description: 'Calculate total energy diverted to emergency shields by summing all numerical values in the powerCells array.',
+    starterCode: `function sumShieldEnergy(powerCells) {\n  // FIX: Change subtraction (-) to addition (+) to sum all power cells\n  return powerCells.reduce((total, cell) => total - cell, 0);\n}`,
+    code: `function sumShieldEnergy(powerCells) {\n  // FIX: Change subtraction (-) to addition (+) to sum all power cells\n  return powerCells.reduce((total, cell) => total - cell, 0);\n}`,
     tests: [
-      { input: [1, 4], expected: 2 },
-      { input: [2, 5], expected: 2 },
-      { input: [3, 3], expected: 0 },
-      { input: [1, 7], expected: 4 }
+      { input: [[10, 20, 30]], expected: 60 },
+      { input: [[15, 25]], expected: 40 },
+      { input: [[100]], expected: 100 }
     ]
   }
 ];
@@ -373,12 +371,12 @@ function isPositionWalkable(x, y, phase) {
   const R = 14; // Operative hit-box collision radius
 
   if (phase === 'LOBBY') {
-    // Strictly restricted inside Dropship Waiting Room:
-    if (x < 1375 || x > 2225 || y < 1145 || y > 1630) {
+    // Strictly restricted inside Dropship Waiting Room (Spacious 1400x860 cabin):
+    if (x < 1140 || x > 2460 || y < 1010 || y > 1740) {
       return false;
     }
     // Prop Barrier: Customization Crate & Laptop Pod
-    if (Math.hypot(x - 1550, y - 1200) < 36) return false;
+    if (Math.hypot(x - 1550, y - 1250) < 36) return false;
     return true;
   }
 
@@ -651,6 +649,7 @@ export default function App() {
     setInRoom(true);
   };
 
+  const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const keysPressed = useRef({});
   const walkCycleRef = useRef(0);
@@ -969,12 +968,25 @@ export default function App() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Resize canvas to responsive viewport (up to 960x640)
-    canvas.width = 960;
-    canvas.height = 640;
+    // Dynamic responsive viewport sizing (full-bleed for laptop & desktop)
+    const updateSize = () => {
+      const container = containerRef.current || canvas.parentElement;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const w = Math.floor(rect.width) || window.innerWidth;
+        const h = Math.floor(rect.height) || (window.innerHeight - 56);
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
 
     // Movement physics & collision boundaries (Balanced default 2.4, controlled by Admin)
     const SPEED = playerSpeedRef.current || 2.4;
+    const ZOOM = 0.82;
 
     const render = () => {
       try {
@@ -1053,13 +1065,15 @@ export default function App() {
         });
       }
 
-      // 2. Camera Viewport Tracking (Centered on local player, clamped to map)
-      const cameraX = Math.max(0, Math.min(MAP_WIDTH - canvas.width, localPos.x - canvas.width / 2));
-      const cameraY = Math.max(0, Math.min(MAP_HEIGHT - canvas.height, localPos.y - canvas.height / 2));
+      // 2. Camera Viewport Tracking (Spacious Laptop Viewport with Zoom Factor 0.82)
+      const viewWidth = canvas.width / ZOOM;
+      const viewHeight = canvas.height / ZOOM;
+
+      const cameraX = Math.max(0, Math.min(MAP_WIDTH - viewWidth, localPos.x - viewWidth / 2));
+      const cameraY = Math.max(0, Math.min(MAP_HEIGHT - viewHeight, localPos.y - viewHeight / 2));
 
       // 3. Render Deep Space Background
-      // Multi-layer nebula background
-      const bgGrad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+      const bgGrad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height));
       bgGrad.addColorStop(0, '#040a18');
       bgGrad.addColorStop(0.5, '#030810');
       bgGrad.addColorStop(1, '#020508');
@@ -1067,6 +1081,7 @@ export default function App() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
+      ctx.scale(ZOOM, ZOOM);
       ctx.translate(-cameraX, -cameraY);
 
       // Nebula clouds (large atmospheric blobs)
@@ -1582,7 +1597,7 @@ export default function App() {
       // =======================================================================
       if (phase === 'LOBBY') {
         // Authentic Big Dropship Waiting Room with Space Viewport, Pilot Seats & Laptop Crate
-        drawDropshipLobby(ctx, { x1: 1340, y1: 1040, x2: 2260, y2: 1660 }, time);
+        drawDropshipLobby(ctx, { x1: 1100, y1: 920, x2: 2500, y2: 1780 }, time);
       } else {
         // Authentic Skeld metal deck floor
         ctx.fillStyle = '#627184';
@@ -2030,21 +2045,27 @@ export default function App() {
         }
       }
 
+      ctx.restore(); // Restore camera translation & zoom
+
       // =======================================================================
       // NIGHT PHASE: FLASHLIGHT FOG-OF-WAR (Developers) vs NIGHT VISION (Mafia)
+      // Screen-space overlay matching responsive viewport and player screen pos
       // =======================================================================
       if (phase === 'NIGHT') {
+        const screenX = (localPos.x - cameraX) * ZOOM;
+        const screenY = (localPos.y - cameraY) * ZOOM;
+
         if (myRole === 'MAFIA') {
           // Mafia: High-tech green night-vision HUD overlay
           ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
-          ctx.fillRect(cameraX, cameraY, canvas.width, canvas.height);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           // Scanlines
           ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
           for (let y = 0; y < canvas.height; y += 4) {
-            ctx.fillRect(cameraX, cameraY + y, canvas.width, 2);
+            ctx.fillRect(0, y, canvas.width, 2);
           }
         } else {
-          // Developers: Darkness mask with 135px circular vision cut-out
+          // Developers: Darkness mask with circular vision cut-out
           const maskCanvas = document.createElement('canvas');
           maskCanvas.width = canvas.width;
           maskCanvas.height = canvas.height;
@@ -2054,24 +2075,21 @@ export default function App() {
           maskCtx.fillRect(0, 0, canvas.width, canvas.height);
 
           maskCtx.globalCompositeOperation = 'destination-out';
-          const screenX = localPos.x - cameraX;
-          const screenY = localPos.y - cameraY;
+          const radius = 155 * ZOOM;
 
-          const flashlightGrad = maskCtx.createRadialGradient(screenX, screenY, 30, screenX, screenY, 140);
+          const flashlightGrad = maskCtx.createRadialGradient(screenX, screenY, 30 * ZOOM, screenX, screenY, radius);
           flashlightGrad.addColorStop(0, 'rgba(0,0,0,1)');
-          flashlightGrad.addColorStop(0.8, 'rgba(0,0,0,0.85)');
+          flashlightGrad.addColorStop(0.85, 'rgba(0,0,0,0.85)');
           flashlightGrad.addColorStop(1, 'rgba(0,0,0,0)');
 
           maskCtx.fillStyle = flashlightGrad;
           maskCtx.beginPath();
-          maskCtx.arc(screenX, screenY, 140, 0, Math.PI * 2);
+          maskCtx.arc(screenX, screenY, radius, 0, Math.PI * 2);
           maskCtx.fill();
 
-          ctx.drawImage(maskCanvas, cameraX, cameraY);
+          ctx.drawImage(maskCanvas, 0, 0);
         }
       }
-
-      ctx.restore(); // Restore camera translation
 
       // =======================================================================
       // PROXIMITY ACTION DETECTION (Within 80px)
@@ -2111,8 +2129,8 @@ export default function App() {
         };
       }
 
-      // Check Wardrobe Pod / Customization Laptop (1550, 1200)
-      if (!foundAction && Math.hypot(localPos.x - 1550, localPos.y - 1200) < 85) {
+      // Check Wardrobe Pod / Customization Laptop (1550, 1250)
+      if (!foundAction && Math.hypot(localPos.x - 1550, localPos.y - 1250) < 85) {
         foundAction = {
           type: 'wardrobe',
           name: phase === 'LOBBY' ? 'Customization Laptop Pod [E]' : 'Decontamination Wardrobe Pod [E]'
@@ -2168,6 +2186,7 @@ export default function App() {
   render();
 
     return () => {
+      window.removeEventListener('resize', updateSize);
       cancelAnimationFrame(animationFrameId);
     };
   }, [localPos, terminals, myRole, phase, roomId, username, selectedColor, selectedVisor, selectedTitle, selectedHero, selectedHat, playerSpeed]);
@@ -2193,13 +2212,13 @@ export default function App() {
           boxSizing: 'border-box'
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '24px', zIndex: 2 }}>
+        <div style={{ textAlign: 'center', marginBottom: '14px', zIndex: 2 }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '4px 12px',
               borderRadius: '20px',
               backgroundColor: 'rgba(56, 189, 248, 0.1)',
               border: '1px solid rgba(56, 189, 248, 0.3)',
@@ -2207,42 +2226,50 @@ export default function App() {
               fontSize: '11px',
               fontWeight: 700,
               letterSpacing: '1px',
-              marginBottom: '14px',
+              marginBottom: '8px',
               boxShadow: '0 0 15px rgba(56, 189, 248, 0.2)'
             }}
           >
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
-            2400x1800 DREADNOUGHT // MULTIPLAYER ARENA
+            3600x2700 THE SKELD MEGASTRUCTURE // AMONG US
           </div>
 
-          <h1 style={{ fontSize: '46px', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+          <h1 style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
             <span style={{ color: '#38bdf8', textShadow: '0 0 20px rgba(56, 189, 248, 0.5)' }}>CODE</span>
             <span style={{ color: '#ef4444', textShadow: '0 0 20px rgba(239, 68, 68, 0.6)' }}>MAFIA</span>
           </h1>
-          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', maxWidth: '480px', lineHeight: '1.5' }}>
-            Explore the 8-room dreadnought, stabilize 6 real-world engineering terminals in Monaco IDE, survive the 30s blackout, and unmask the cyber infiltrators!
+          <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', maxWidth: '520px', lineHeight: '1.4' }}>
+            Explore the authentic Skeld dreadnought, solve simplified engineering terminals, navigate animated vents, and catch the cyber infiltrators!
           </p>
         </div>
 
         <div
           style={{
             width: '100%',
-            maxWidth: '460px',
-            backgroundColor: 'rgba(15, 23, 42, 0.94)',
+            maxWidth: '1040px',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
             backdropFilter: 'blur(16px)',
             border: '1px solid #334155',
-            borderRadius: '14px',
-            padding: '28px',
+            borderRadius: '16px',
+            padding: '20px 24px',
             boxSizing: 'border-box',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15)',
             zIndex: 2
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '14px', marginBottom: '18px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc', letterSpacing: '1px' }}>
-              SPACESHIP AIRLOCK REGISTRATION
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc', letterSpacing: '1px' }}>
+                SPACESHIP AIRLOCK REGISTRATION
+              </span>
+              <span style={{ fontSize: '9px', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(56,189,248,0.15)', color: '#38bdf8', fontWeight: 800 }}>
+                LAPTOP WIDESCREEN
+              </span>
+            </div>
+            <span style={{ fontSize: '11px', color: connected ? '#10b981' : '#f87171', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
+              {connected ? 'GAME SERVER ONLINE' : 'SOLO / OFFLINE READY'}
             </span>
-            <span style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 700 }}>2D CANVAS V2</span>
           </div>
 
           <form
@@ -2251,7 +2278,7 @@ export default function App() {
               if (!roomId.trim() || !username.trim()) return;
               if (!connected) {
                 setShowServerConfig(true);
-                alert("⚠️ Cannot Board: Game Server Offline!\n\nYour game frontend is running on Vercel, but it cannot connect to the backend WebSocket server.\n\n👉 Deploy your backend to Render.com and paste your Render URL into 'Server URL' below!");
+                alert("⚠️ Cannot Board: Game Server Offline!\n\nYour game frontend is running on Vercel, but it cannot connect to the backend WebSocket server.\n\n👉 Click 'LAUNCH SOLO SIMULATION' to practice offline, or enter your Render backend link in 'Server URL'!");
                 return;
               }
               const heroObj = getHero(selectedHero);
@@ -2266,235 +2293,254 @@ export default function App() {
               });
               setInRoom(true);
             }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+              gap: '24px',
+              alignItems: 'start'
+            }}
           >
-            {/* Server Connection Status Banner */}
-            <div style={{
-              padding: '10px 12px',
-              borderRadius: '8px',
-              backgroundColor: connected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.15)',
-              border: connected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              fontSize: '11px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: connected ? '#10b981' : '#f87171', fontWeight: 700 }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
-                  {connected ? 'GAME SERVER ONLINE' : 'GAME SERVER OFFLINE'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowServerConfig(!showServerConfig)}
-                  style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                >
-                  {showServerConfig ? 'Close' : '⚙️ Server URL'}
-                </button>
+            {/* COLUMN 1: CREWMATE WARDROBE & IDENTITY */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.8px', borderBottom: '1px solid #1e293b', paddingBottom: '4px' }}>
+                ◈ CREWMATE DOSSIER & WARDROBE
               </div>
-              {!connected && !showServerConfig && (
-                <div style={{ color: '#cbd5e1', fontSize: '10px', lineHeight: '1.4' }}>
-                  Target: <span style={{ color: '#f87171', fontFamily: 'monospace' }}>{SERVER_URL || 'None'}</span>. Click <b style={{ color: '#38bdf8' }}>⚙️ Server URL</b> to enter your Render backend link.
+
+              {/* Crewmate Preview & Callsign */}
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'center', backgroundColor: '#090d16', padding: '10px 12px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                <div style={{ width: '80px', height: '96px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#030712', borderRadius: '8px', border: '1px solid #334155', flexShrink: 0 }}>
+                  <CrewmatePreview colorId={selectedHero} hatId={selectedHat} width={74} height={90} isMoving={true} />
                 </div>
-              )}
-              {showServerConfig && (
-                <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <input
-                      type="text"
-                      placeholder="https://code-mafia-server.onrender.com"
-                      value={serverUrlInput}
-                      onChange={(e) => setServerUrlInput(e.target.value)}
-                      style={{ flex: 1, padding: '6px 8px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}
-                    />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>CREWMATE CALLSIGN</label>
                     <button
                       type="button"
-                      onClick={() => {
-                        const formatted = (serverUrlInput.trim() || PROD_SERVER_URL).replace(/\/$/, '');
-                        localStorage.setItem('code_mafia_server_url', formatted);
-                        window.location.reload();
-                      }}
-                      style={{ padding: '6px 12px', backgroundColor: '#0284c7', border: 'none', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      onClick={() => setUsername(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)])}
+                      style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
                     >
-                      Connect
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        localStorage.removeItem('code_mafia_server_url');
-                        window.location.reload();
-                      }}
-                      title="Reset to official cloud server"
-                      style={{ padding: '6px 10px', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '4px', color: '#94a3b8', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      Reset
+                      <Dices size={12} /> Randomize
                     </button>
                   </div>
-                  <span style={{ fontSize: '9px', color: '#64748b' }}>
-                    Default Cloud Server: <code style={{ color: '#38bdf8' }}>{PROD_SERVER_URL}</code>
-                  </span>
+                  <input
+                    type="text"
+                    required
+                    maxLength={18}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '13px', fontWeight: 700, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                    Color: <span style={{ color: getCrewmateColor(selectedHero).hex, fontWeight: 700 }}>{getCrewmateColor(selectedHero).name}</span>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Select Among Us Color (12 colors) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.8px' }}>
+                    SUIT COLOR: <span style={{ color: getCrewmateColor(selectedHero).hex }}>{getCrewmateColor(selectedHero).name.toUpperCase()}</span>
+                  </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                  {CREWMATE_COLORS.map((c) => {
+                    const isSel = selectedHero === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedHero(c.id);
+                          setSelectedColor(c.hex);
+                          setSelectedVisor('#98d0e1');
+                          localStorage.setItem('amongus_color', c.id);
+                          localStorage.setItem('code_mafia_hero', c.id);
+                        }}
+                        style={{
+                          height: '30px',
+                          borderRadius: '6px',
+                          backgroundColor: c.hex,
+                          border: isSel ? '3px solid #ffffff' : '2px solid rgba(0,0,0,0.6)',
+                          boxShadow: isSel ? '0 0 10px #ffffff' : 'none',
+                          cursor: 'pointer',
+                          transform: isSel ? 'scale(1.08)' : 'scale(1)',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={c.name}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Select Among Us Hat (10 hats) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.8px' }}>
+                    EQUIP HAT: <span style={{ color: '#38bdf8' }}>{CREWMATE_HATS.find(h => h.id === selectedHat)?.name.toUpperCase() || 'NO HAT'}</span>
+                  </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '5px' }}>
+                  {CREWMATE_HATS.map((h) => {
+                    const isSel = selectedHat === h.id;
+                    return (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedHat(h.id);
+                          localStorage.setItem('amongus_hat', h.id);
+                        }}
+                        style={{
+                          padding: '4px 2px',
+                          borderRadius: '6px',
+                          backgroundColor: isSel ? '#1e293b' : '#090d16',
+                          border: isSel ? '2px solid #38bdf8' : '1px solid #1e293b',
+                          color: '#fff',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '16px' }}>{h.emoji}</span>
+                        <span style={{ fontSize: '8.5px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '48px' }}>
+                          {h.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Crewmate Preview & Callsign */}
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', backgroundColor: '#090d16', padding: '12px', borderRadius: '10px', border: '1px solid #1e293b' }}>
-              <div style={{ width: '90px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#030712', borderRadius: '8px', border: '1px solid #334155' }}>
-                <CrewmatePreview colorId={selectedHero} hatId={selectedHat} width={80} height={100} isMoving={true} />
+            {/* COLUMN 2: SECTOR LAUNCH & FLIGHT CONTROLS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.8px', borderBottom: '1px solid #1e293b', paddingBottom: '4px' }}>
+                ◈ SECTOR DISPATCH & LAUNCH
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>CREWMATE CALLSIGN</label>
+
+              {/* Server Connection Status Banner */}
+              <div style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                backgroundColor: connected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.12)',
+                border: connected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.35)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                fontSize: '11px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: connected ? '#10b981' : '#f87171', fontWeight: 700 }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: connected ? '#10b981' : '#ef4444' }} />
+                    {connected ? 'GAME SERVER ONLINE' : 'GAME SERVER OFFLINE'}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setUsername(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)])}
-                    style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                    onClick={() => setShowServerConfig(!showServerConfig)}
+                    style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
                   >
-                    <Dices size={12} /> Randomize
+                    {showServerConfig ? 'Close' : '⚙️ Server URL'}
                   </button>
                 </div>
+                {!connected && !showServerConfig && (
+                  <div style={{ color: '#cbd5e1', fontSize: '10px', lineHeight: '1.4' }}>
+                    Target: <span style={{ color: '#f87171', fontFamily: 'monospace' }}>{SERVER_URL || 'None'}</span>. Click <b style={{ color: '#38bdf8' }}>⚙️ Server URL</b> to enter your Render backend.
+                  </div>
+                )}
+                {showServerConfig && (
+                  <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input
+                        type="text"
+                        placeholder="https://code-mafia-server.onrender.com"
+                        value={serverUrlInput}
+                        onChange={(e) => setServerUrlInput(e.target.value)}
+                        style={{ flex: 1, padding: '6px 8px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const formatted = (serverUrlInput.trim() || PROD_SERVER_URL).replace(/\/$/, '');
+                          localStorage.setItem('code_mafia_server_url', formatted);
+                          window.location.reload();
+                        }}
+                        style={{ padding: '6px 12px', backgroundColor: '#0284c7', border: 'none', borderRadius: '4px', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Connect
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.removeItem('code_mafia_server_url');
+                          window.location.reload();
+                        }}
+                        title="Reset to official cloud server"
+                        style={{ padding: '6px 10px', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '4px', color: '#94a3b8', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Room Code */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.8px', marginBottom: '4px' }}>
+                  SPACESHIP SECTOR CODE
+                </label>
                 <input
                   type="text"
                   required
-                  maxLength={18}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '14px', fontWeight: 700, fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  maxLength={24}
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box' }}
                 />
               </div>
-            </div>
 
-            {/* Select Among Us Color */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, letterSpacing: '1px' }}>
-                  CREWMATE SUIT COLOR: <span style={{ color: getCrewmateColor(selectedHero).hex }}>{getCrewmateColor(selectedHero).name.toUpperCase()}</span>
-                </label>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
-                {CREWMATE_COLORS.map((c) => {
-                  const isSel = selectedHero === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedHero(c.id);
-                        setSelectedColor(c.hex);
-                        setSelectedVisor('#98d0e1');
-                        localStorage.setItem('amongus_color', c.id);
-                        localStorage.setItem('code_mafia_hero', c.id);
-                      }}
-                      style={{
-                        height: '34px',
-                        borderRadius: '6px',
-                        backgroundColor: c.hex,
-                        border: isSel ? '3px solid #ffffff' : '2px solid rgba(0,0,0,0.6)',
-                        boxShadow: isSel ? '0 0 10px #ffffff' : 'none',
-                        cursor: 'pointer',
-                        transform: isSel ? 'scale(1.08)' : 'scale(1)',
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={c.name}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+              {/* Launch Action Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {connected && (
+                  <button
+                    type="submit"
+                    disabled={!roomId.trim() || !username.trim()}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                      border: '1px solid #38bdf8',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      letterSpacing: '1px',
+                      fontFamily: 'inherit',
+                      cursor: (!roomId.trim() || !username.trim()) ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)'
+                    }}
+                  >
+                    ENTER MULTIPLAYER DECK ➔
+                  </button>
+                )}
 
-            {/* Select Among Us Hat */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, letterSpacing: '1px' }}>
-                  EQUIP HAT: <span style={{ color: '#38bdf8' }}>{CREWMATE_HATS.find(h => h.id === selectedHat)?.name.toUpperCase() || 'NO HAT'}</span>
-                </label>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
-                {CREWMATE_HATS.map((h) => {
-                  const isSel = selectedHat === h.id;
-                  return (
-                    <button
-                      key={h.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedHat(h.id);
-                        localStorage.setItem('amongus_hat', h.id);
-                      }}
-                      style={{
-                        padding: '6px 4px',
-                        borderRadius: '6px',
-                        backgroundColor: isSel ? '#1e293b' : '#090d16',
-                        border: isSel ? '2px solid #38bdf8' : '1px solid #1e293b',
-                        color: '#fff',
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '2px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <span style={{ fontSize: '18px' }}>{h.emoji}</span>
-                      <span style={{ fontSize: '9px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '52px' }}>
-                        {h.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Room Code */}
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px' }}>
-                SPACESHIP SECTOR CODE
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={24}
-                value={roomId}
-                onChange={(e) => setRoomId(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', backgroundColor: '#090d16', border: '1px solid #334155', borderRadius: '6px', color: '#fff', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            {connected ? (
-              <button
-                type="submit"
-                disabled={!roomId.trim() || !username.trim()}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  marginTop: '4px',
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                  border: '1px solid #38bdf8',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  fontWeight: 800,
-                  letterSpacing: '1px',
-                  fontFamily: 'inherit',
-                  cursor: (!roomId.trim() || !username.trim()) ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)'
-                }}
-              >
-                ENTER THE SKELD WAITING DECK ➔
-              </button>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
                 <button
                   type="button"
                   onClick={startSoloSimulation}
                   style={{
                     width: '100%',
-                    padding: '14px',
+                    padding: '12px',
                     background: 'linear-gradient(135deg, #0284c7 0%, #7c3aed 100%)',
                     border: '1px solid #38bdf8',
                     borderRadius: '8px',
                     color: '#ffffff',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 800,
                     letterSpacing: '1px',
                     fontFamily: 'inherit',
@@ -2503,34 +2549,25 @@ export default function App() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  🚀 LAUNCH SOLO SIMULATION (TEST GRAPHICS & SHIP) ➔
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowServerConfig(!showServerConfig)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.5)',
-                    borderRadius: '8px',
-                    color: '#f87171',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.5px',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <AlertTriangle size={14} /> BACKEND OFFLINE: CLICK TO CONFIGURE / DEPLOY
+                  🚀 LAUNCH SOLO SIMULATION (PRACTICE OFFLINE) ➔
                 </button>
               </div>
-            )}
+
+              {/* Laptop Flight Controls Cheat-Sheet */}
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: '#090d16', border: '1px solid #1e293b' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: '#38bdf8', marginBottom: '6px', letterSpacing: '0.8px' }}>
+                  🕹️ LAPTOP FLIGHT CONTROLS
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', fontSize: '10.5px', color: '#94a3b8' }}>
+                  <div><kbd style={{ backgroundColor: '#1e293b', color: '#f8fafc', padding: '1px 5px', borderRadius: '3px', fontWeight: 700, fontSize: '10px' }}>WASD</kbd> Move</div>
+                  <div><kbd style={{ backgroundColor: '#1e293b', color: '#f8fafc', padding: '1px 5px', borderRadius: '3px', fontWeight: 700, fontSize: '10px' }}>E</kbd> Use / Terminal</div>
+                  <div><kbd style={{ backgroundColor: '#1e293b', color: '#c084fc', padding: '1px 5px', borderRadius: '3px', fontWeight: 700, fontSize: '10px' }}>V</kbd> Vent (Impostor)</div>
+                  <div><kbd style={{ backgroundColor: '#1e293b', color: '#f87171', padding: '1px 5px', borderRadius: '3px', fontWeight: 700, fontSize: '10px' }}>R</kbd> Report Body</div>
+                  <div><kbd style={{ backgroundColor: '#1e293b', color: '#f87171', padding: '1px 5px', borderRadius: '3px', fontWeight: 700, fontSize: '10px' }}>Q</kbd> Sabotage / Kill</div>
+                  <div><kbd style={{ backgroundColor: '#1e293b', color: '#38bdf8', padding: '1px 5px', borderRadius: '3px', fontWeight: 700, fontSize: '10px' }}>M</kbd> Mini-Map</div>
+                </div>
+              </div>
+            </div>
           </form>
         </div>
       </div>
@@ -2810,16 +2847,26 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Canvas Play Area */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Main Canvas Play Area (Responsive Full-Bleed for Laptop & Desktop) */}
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          backgroundColor: '#020508'
+        }}
+      >
         <canvas
           ref={canvasRef}
           style={{
-            width: '960px',
-            height: '640px',
-            borderRadius: '12px',
-            border: '1px solid #1e293b',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            display: 'block'
           }}
         />
 
@@ -3333,46 +3380,96 @@ export default function App() {
           </div>
         )}
 
-        {/* REAL-TIME MINI-MAP HUD (Top Right) */}
+        {/* REAL-TIME MINI-MAP HUD (Top Right, 240x175 Widescreen Laptop Radar) */}
         {showMiniMap && (
           <div
             style={{
               position: 'absolute',
-              top: '20px',
-              right: '20px',
-              width: '200px',
-              height: '150px',
-              backgroundColor: 'rgba(9, 13, 22, 0.92)',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
+              top: '16px',
+              right: '16px',
+              width: '240px',
+              height: '175px',
+              backgroundColor: 'rgba(5, 10, 20, 0.94)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              borderRadius: '10px',
+              boxShadow: '0 12px 30px rgba(0,0,0,0.8), 0 0 16px rgba(56, 189, 248, 0.15)',
               zIndex: 15,
               overflow: 'hidden'
             }}
           >
-            {/* Map Rooms Outline in miniature */}
-            <div style={{ position: 'absolute', inset: 0, opacity: 0.35 }}>
-              <div style={{ position: 'absolute', left: '37%', top: '7%', width: '26%', height: '23%', border: '1px solid #38bdf8' }} />  {/* Bridge */}
-              <div style={{ position: 'absolute', left: '7%', top: '7%', width: '22%', height: '24%', border: '1px solid #6366f1' }} />   {/* AI Mainframe */}
-              <div style={{ position: 'absolute', left: '71%', top: '7%', width: '22%', height: '24%', border: '1px solid #f59e0b' }} />  {/* Comms & Sensors */}
-              <div style={{ position: 'absolute', left: '6%', top: '41%', width: '22%', height: '28%', border: '1px solid #ef4444' }} />   {/* Security Vault */}
-              <div style={{ position: 'absolute', left: '72%', top: '41%', width: '22%', height: '28%', border: '1px solid #10b981' }} />  {/* Bio-Lab */}
-              <div style={{ position: 'absolute', left: '37%', top: '38%', width: '26%', height: '23%', border: '1px solid #64748b' }} />  {/* Central Atrium */}
-              <div style={{ position: 'absolute', left: '37%', top: '70%', width: '26%', height: '24%', border: '1px solid #8b5cf6' }} />  {/* Reactor Core */}
+            {/* Radar Header */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '20px',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 8px',
+                zIndex: 3
+              }}
+            >
+              <span style={{ fontSize: '9px', fontWeight: 900, color: '#38bdf8', letterSpacing: '0.8px' }}>
+                RADAR // 3600x2700
+              </span>
+              <span style={{ fontSize: '8px', color: '#94a3b8' }}>
+                [M] TOGGLE
+              </span>
+            </div>
+
+            {/* Map Rooms Outline in miniature with subtle room tints */}
+            <div style={{ position: 'absolute', inset: '20px 0 0 0', opacity: 0.75 }}>
+              {/* Bridge */}
+              <div style={{ position: 'absolute', left: '37.5%', top: '7.4%', width: '25%', height: '22.2%', border: '1px solid #38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#7dd3fc', fontWeight: 700 }}>BRIDGE</span>
+              </div>
+              {/* AI Mainframe */}
+              <div style={{ position: 'absolute', left: '6.9%', top: '7.4%', width: '22.2%', height: '24%', border: '1px solid #818cf8', backgroundColor: 'rgba(129, 140, 248, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#a5b4fc', fontWeight: 700 }}>ENGINES</span>
+              </div>
+              {/* Comms */}
+              <div style={{ position: 'absolute', left: '70.8%', top: '7.4%', width: '22.2%', height: '24%', border: '1px solid #f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#fcd34d', fontWeight: 700 }}>COMMS</span>
+              </div>
+              {/* Security */}
+              <div style={{ position: 'absolute', left: '5.5%', top: '40.7%', width: '22.2%', height: '27.7%', border: '1px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#fca5a5', fontWeight: 700 }}>SECURITY</span>
+              </div>
+              {/* Central Atrium */}
+              <div style={{ position: 'absolute', left: '37.5%', top: '38.8%', width: '25%', height: '22.2%', border: '1px solid #94a3b8', backgroundColor: 'rgba(148, 163, 184, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#cbd5e1', fontWeight: 700 }}>ATRIUM</span>
+              </div>
+              {/* Bio-Lab */}
+              <div style={{ position: 'absolute', left: '72.2%', top: '40.7%', width: '22.2%', height: '27.7%', border: '1px solid #10b981', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#6ee7b7', fontWeight: 700 }}>MEDBAY</span>
+              </div>
+              {/* Reactor */}
+              <div style={{ position: 'absolute', left: '37.5%', top: '70.3%', width: '25%', height: '22.2%', border: '1px solid #a855f7', backgroundColor: 'rgba(168, 85, 247, 0.08)', borderRadius: '3px' }}>
+                <span style={{ position: 'absolute', top: '2px', left: '3px', fontSize: '7px', color: '#d8b4fe', fontWeight: 700 }}>REACTOR</span>
+              </div>
             </div>
 
             {/* Terminal Status Blips */}
             {terminals.map((t) => (
               <div
                 key={t.id}
+                title={`${t.name} (${t.solved ? 'FIXED' : t.sabotaged ? 'SABOTAGED' : 'PENDING'})`}
                 style={{
                   position: 'absolute',
-                  left: `${(t.x / MAP_WIDTH) * 200 - 3}px`,
-                  top: `${(t.y / MAP_HEIGHT) * 150 - 3}px`,
-                  width: '6px',
-                  height: '6px',
+                  left: `${Math.round((t.x / MAP_WIDTH) * 240) - 3}px`,
+                  top: `${20 + Math.round((t.y / MAP_HEIGHT) * 155) - 3}px`,
+                  width: '7px',
+                  height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: t.solved ? '#10b981' : (t.sabotaged ? '#ef4444' : '#f59e0b')
+                  backgroundColor: t.solved ? '#10b981' : (t.sabotaged ? '#ef4444' : '#f59e0b'),
+                  boxShadow: t.solved ? '0 0 6px #10b981' : (t.sabotaged ? '0 0 8px #ef4444' : '0 0 6px #f59e0b'),
+                  zIndex: 4
                 }}
               />
             ))}
@@ -3381,20 +3478,17 @@ export default function App() {
             <div
               style={{
                 position: 'absolute',
-                left: `${(localPos.x / MAP_WIDTH) * 200 - 4}px`,
-                top: `${(localPos.y / MAP_HEIGHT) * 150 - 4}px`,
-                width: '8px',
-                height: '8px',
+                left: `${Math.round((localPos.x / MAP_WIDTH) * 240) - 4}px`,
+                top: `${20 + Math.round((localPos.y / MAP_HEIGHT) * 155) - 4}px`,
+                width: '9px',
+                height: '9px',
                 borderRadius: '50%',
                 backgroundColor: '#ffffff',
                 border: '2px solid #38bdf8',
-                boxShadow: '0 0 8px #38bdf8'
+                boxShadow: '0 0 10px #38bdf8, 0 0 4px #ffffff',
+                zIndex: 5
               }}
             />
-
-            <div style={{ position: 'absolute', bottom: '4px', right: '6px', fontSize: '8px', color: '#64748b' }}>
-              RADAR // 3600x2700 MEGASTRUCTURE
-            </div>
           </div>
         )}
       </div>

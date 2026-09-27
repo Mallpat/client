@@ -1034,9 +1034,9 @@ export function drawDropshipLobby(ctx, bounds, time) {
   ctx.fillStyle = '#334155';
   ctx.fillRect(x2 - 40, y1 + 196, 18, h - 352);
 
-  // 7. Iconic Customization Crate & Laptop at (1550, 1200)
+  // 7. Iconic Customization Crate & Laptop at (1550, 1250)
   const crateX = 1550;
-  const crateY = 1200;
+  const crateY = 1250;
 
   // Crate Ground Shadow
   ctx.beginPath();

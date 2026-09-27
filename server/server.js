@@ -54,141 +54,112 @@ function createInitialTerminals() {
   return [
     {
       id: 'terminal-1',
-      name: 'Terminal 1 // Hyperspace Matrix Rotation',
+      name: 'Terminal 1 // Navigation Warp Calibration',
       roomName: 'Command Bridge (Sector 1 - North)',
       x: 1800,
       y: 400,
       solved: false,
       sabotaged: false,
-      functionName: 'rotateMatrix90',
-      description: 'The navigation telemetry matrix must be rotated 90 degrees clockwise to align with the jump gate. Implement rotateMatrix90(matrix) without mutating the input.',
-      starterCode: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
-      code: `function rotateMatrix90(matrix) {\n  // BUG: Flawed transpose logic returning unchanged dimensions\n  return matrix.reverse();\n}`,
+      functionName: 'calculateJumpDistance',
+      description: 'Calibrate the warp jump engine. Return the warp jump distance by multiplying the energy charge (energy) by the engine velocity (velocity).',
+      starterCode: `function calculateJumpDistance(energy, velocity) {\n  // FIX: Change subtraction (-) to multiplication (*)\n  return energy - velocity;\n}`,
+      code: `function calculateJumpDistance(energy, velocity) {\n  // FIX: Change subtraction (-) to multiplication (*)\n  return energy - velocity;\n}`,
       tests: [
-        {
-          input: [[[1, 2], [3, 4]]],
-          expected: [[3, 1], [4, 2]]
-        },
-        {
-          input: [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]],
-          expected: [[7, 4, 1], [8, 5, 2], [9, 6, 3]]
-        },
-        {
-          input: [[[5]]],
-          expected: [[5]]
-        }
+        { input: [10, 5], expected: 50 },
+        { input: [4, 8], expected: 32 },
+        { input: [7, 0], expected: 0 }
       ]
     },
     {
       id: 'terminal-2',
-      name: 'Terminal 2 // LRU Cache Eviction',
+      name: 'Terminal 2 // Reactor Coolant Safety Check',
       roomName: 'AI & Quantum Mainframe (Sector 2 - North-West)',
       x: 650,
       y: 500,
       solved: false,
       sabotaged: false,
-      functionName: 'evictStaleKeys',
-      description: 'The AI core memory buffer has stale telemetry keys. Implement evictStaleKeys(cache, maxAge) that removes all key-value entries with age > maxAge and returns the cleaned object.',
-      starterCode: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
-      code: `function evictStaleKeys(cache, maxAge) {\n  // BUG: Fails to filter numeric values correctly\n  return {};\n}`,
+      functionName: 'isTemperatureSafe',
+      description: 'Verify if the reactor coolant temperature is within safe operating limits. Return true if temperature is between minTemp and maxTemp (inclusive), otherwise return false.',
+      starterCode: `function isTemperatureSafe(temperature, minTemp, maxTemp) {\n  // FIX: Return true only if temperature >= minTemp && temperature <= maxTemp\n  return temperature > maxTemp;\n}`,
+      code: `function isTemperatureSafe(temperature, minTemp, maxTemp) {\n  // FIX: Return true only if temperature >= minTemp && temperature <= maxTemp\n  return temperature > maxTemp;\n}`,
       tests: [
-        {
-          input: [{ telemetry_a: 15, telemetry_b: 45, telemetry_c: 5 }, 20],
-          expected: { telemetry_a: 15, telemetry_c: 5 }
-        },
-        {
-          input: [{ ping: 100, pong: 200 }, 50],
-          expected: {}
-        },
-        {
-          input: [{ node_x: 2, node_y: 4 }, 10],
-          expected: { node_x: 2, node_y: 4 }
-        }
+        { input: [75, 50, 100], expected: true },
+        { input: [120, 50, 100], expected: false },
+        { input: [30, 50, 100], expected: false },
+        { input: [50, 50, 100], expected: true }
       ]
     },
     {
       id: 'terminal-3',
-      name: 'Terminal 3 // Signal Packet Defragmenter',
+      name: 'Terminal 3 // Distress Beacon Broadcaster',
       roomName: 'Communications & Sensor Array (Sector 3 - North-East)',
       x: 2950,
       y: 500,
       solved: false,
       sabotaged: false,
-      functionName: 'defragmentPackets',
-      description: 'The deep-space radio array received fragmented packets out of order. Implement defragmentPackets(packets) to sort packets by their .seq number and concatenate their .data strings into one message.',
-      starterCode: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
-      code: `function defragmentPackets(packets) {\n  // BUG: Concatenates without sorting by sequence ID\n  return packets.map(p => p.data).join('');\n}`,
+      functionName: 'formatDistressSignal',
+      description: 'Format the emergency distress signal into capital letters so all allied fleet ships can decode the transmission.',
+      starterCode: `function formatDistressSignal(signal) {\n  // FIX: Convert signal string to uppercase with .toUpperCase()\n  return signal.toLowerCase();\n}`,
+      code: `function formatDistressSignal(signal) {\n  // FIX: Convert signal string to uppercase with .toUpperCase()\n  return signal.toLowerCase();\n}`,
       tests: [
-        {
-          input: [[{ seq: 3, data: 'WORLD' }, { seq: 1, data: 'HELLO ' }, { seq: 2, data: 'SPACESHIP ' }]],
-          expected: 'HELLO SPACESHIP WORLD'
-        },
-        {
-          input: [[{ seq: 2, data: '9' }, { seq: 1, data: 'AETHER-' }]],
-          expected: 'AETHER-9'
-        },
-        {
-          input: [[{ seq: 1, data: 'BEACON_ONLINE' }]],
-          expected: 'BEACON_ONLINE'
-        }
+        { input: ['sos skeld'], expected: 'SOS SKELD' },
+        { input: ['infiltrator detected'], expected: 'INFILTRATOR DETECTED' },
+        { input: ['reactor ok'], expected: 'REACTOR OK' }
       ]
     },
     {
       id: 'terminal-4',
-      name: 'Terminal 4 // Cryptographic Checksum Validator',
+      name: 'Terminal 4 // Security Airlock Passcode',
       roomName: 'Security & Surveillance Vault (Sector 4 - West)',
       x: 550,
       y: 1450,
       solved: false,
       sabotaged: false,
-      functionName: 'validateSecurityChecksum',
-      description: 'The security vault airlock requires a parity checksum. Write validateSecurityChecksum(str) to return true if the sum of ASCII character codes is even, and false if odd.',
-      starterCode: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
-      code: `function validateSecurityChecksum(str) {\n  // BUG: Returns string length parity instead of ASCII sum\n  return str.length % 2 === 0;\n}`,
+      functionName: 'validateAirlockCode',
+      description: 'Validate the security airlock keycode. Return true if code length is at least 4 characters AND code does not equal "sabotage".',
+      starterCode: `function validateAirlockCode(code) {\n  // FIX: Return true if code.length >= 4 and code !== 'sabotage'\n  return code.length > 20;\n}`,
+      code: `function validateAirlockCode(code) {\n  // FIX: Return true if code.length >= 4 and code !== 'sabotage'\n  return code.length > 20;\n}`,
       tests: [
-        { input: ['AB'], expected: false },
-        { input: ['AA'], expected: true },
-        { input: ['SECURITY'], expected: true },
-        { input: ['CYBER'], expected: false },
-        { input: ['VAULT'], expected: true }
+        { input: ['skeld99'], expected: true },
+        { input: ['key'], expected: false },
+        { input: ['sabotage'], expected: false },
+        { input: ['vault_open'], expected: true }
       ]
     },
     {
       id: 'terminal-5',
-      name: 'Terminal 5 // Gene Sequence Splicer',
+      name: 'Terminal 5 // MedBay Sample Purifier',
       roomName: 'Cybernetics & Bio-Lab (Sector 5 - East)',
       x: 3050,
       y: 1450,
       solved: false,
       sabotaged: false,
-      functionName: 'spliceNucleotides',
-      description: 'The bio-lab stasis gene requires splicing. Implement spliceNucleotides(dna, target) which returns the count of times target substring appears in the dna strand without overlapping.',
-      starterCode: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
-      code: `function spliceNucleotides(dna, target) {\n  // BUG: Only checks if included\n  return dna.includes(target) ? 1 : 0;\n}`,
+      functionName: 'countCleanSamples',
+      description: 'Filter test samples in the centrifuge. Return the total count of samples in the array that equal "clean".',
+      starterCode: `function countCleanSamples(samples) {\n  // FIX: Change 'infected' to 'clean' to count sterile test tubes\n  return samples.filter(s => s === 'infected').length;\n}`,
+      code: `function countCleanSamples(samples) {\n  // FIX: Change 'infected' to 'clean' to count sterile test tubes\n  return samples.filter(s => s === 'infected').length;\n}`,
       tests: [
-        { input: ['ATCGATCGATCG', 'ATCG'], expected: 3 },
-        { input: ['AAAA', 'AA'], expected: 2 },
-        { input: ['GCATGC', 'XYZ'], expected: 0 },
-        { input: ['CGCGCGC', 'CGC'], expected: 2 }
+        { input: [['clean', 'infected', 'clean']], expected: 2 },
+        { input: [['infected', 'infected']], expected: 0 },
+        { input: [['clean', 'clean', 'clean']], expected: 3 }
       ]
     },
     {
       id: 'terminal-6',
-      name: 'Terminal 6 // Plasma Pressure Balancer',
+      name: 'Terminal 6 // Shield Power Energy Diverter',
       roomName: 'Quantum Hyper-Reactor Core (Sector 6 - South)',
       x: 1800,
       y: 2250,
       solved: false,
       sabotaged: false,
-      functionName: 'convergePlasmaFrequency',
-      description: 'The quantum reactor core requires balancing. Write convergePlasmaFrequency(base, target) to return the minimum number of step adjustments needed to reach target if each step can multiply by 2 or add 1 (starting at base).',
-      starterCode: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
-      code: `function convergePlasmaFrequency(base, target) {\n  // BUG: Returns direct difference\n  return target - base;\n}`,
+      functionName: 'sumShieldEnergy',
+      description: 'Calculate total energy diverted to emergency shields by summing all numerical values in the powerCells array.',
+      starterCode: `function sumShieldEnergy(powerCells) {\n  // FIX: Change subtraction (-) to addition (+) to sum all power cells\n  return powerCells.reduce((total, cell) => total - cell, 0);\n}`,
+      code: `function sumShieldEnergy(powerCells) {\n  // FIX: Change subtraction (-) to addition (+) to sum all power cells\n  return powerCells.reduce((total, cell) => total - cell, 0);\n}`,
       tests: [
-        { input: [1, 4], expected: 2 },
-        { input: [2, 5], expected: 2 },
-        { input: [3, 3], expected: 0 },
-        { input: [1, 7], expected: 4 }
+        { input: [[10, 20, 30]], expected: 60 },
+        { input: [[15, 25]], expected: 40 },
+        { input: [[100]], expected: 100 }
       ]
     }
   ];
