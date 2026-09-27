@@ -37,6 +37,22 @@ import {
 } from 'lucide-react';
 import { AVENGERS_HEROES, getHero, drawAvenger, drawFallenRelic, drawThanosSnap } from './avengers';
 
+// Safe canvas roundRect polyfill for broad browser compatibility
+if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r = 0) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
+    return this;
+  };
+}
+
 const PROD_SERVER_URL = 'https://code-mafia-server.onrender.com';
 
 const getInitialServerUrl = () => {
@@ -517,8 +533,8 @@ export default function App() {
   const [winReason, setWinReason] = useState(null);
   const [emergencyCaller, setEmergencyCaller] = useState(null);
 
-  // Local Player & Canvas state
-  const [localPos, setLocalPos] = useState({ x: 1800, y: 1350 });
+  // Local Player & Canvas state (Spawn at 1800, 1420 to prevent landing inside table barrier)
+  const [localPos, setLocalPos] = useState({ x: 1800, y: 1420 });
   const [activeTerminal, setActiveTerminal] = useState(null); // terminal opened in IDE modal
   const [terminalCode, setTerminalCode] = useState('');
   const [testResults, setTestResults] = useState(null);
@@ -539,7 +555,7 @@ export default function App() {
     setTotalTerminals(6);
     setSolvedCount(0);
     setTerminals(CLIENT_TERMINALS);
-    setLocalPos({ x: 1800, y: 1350 });
+    setLocalPos({ x: 1800, y: 1420 });
     setPlayers([
       {
         id: 'local_player',
@@ -549,7 +565,7 @@ export default function App() {
         operativeTitle: selectedTitle || heroObj.roleTitle,
         characterId: selectedHero,
         x: 1800,
-        y: 1350,
+        y: 1420,
         isMoving: false,
         facingLeft: false,
         role: 'DEV',
@@ -802,10 +818,13 @@ export default function App() {
     const SPEED = playerSpeedRef.current || 2.4;
 
     const render = () => {
-      // 1. Movement Calculations
-      let dx = 0;
-      let dy = 0;
-      const k = keysPressed.current;
+      try {
+        const time = Date.now() / 1000;
+
+        // 1. Movement Calculations
+        let dx = 0;
+        let dy = 0;
+        const k = keysPressed.current;
 
       if (k['w'] || k['arrowup']) dy -= 1;
       if (k['s'] || k['arrowdown']) dy += 1;
@@ -930,7 +949,6 @@ export default function App() {
       // =======================================================================
       // DRAW EXPANDED 3600 x 2700 DREADNOUGHT MEGASTRUCTURE SECTORS & PROPS
       // =======================================================================
-      const time = Date.now() / 1000;
 
       // -----------------------------------------------------------------------
       // OUTER DREADNOUGHT HULL ARMOR (multi-layer with beveled edges)
@@ -1728,12 +1746,29 @@ export default function App() {
         };
       }
 
-      setNearbyAction(foundAction);
+      // Avoid unnecessary state re-renders at 60fps if nearby target hasn't changed
+      setNearbyAction((prev) => {
+        if (!prev && !foundAction) return prev;
+        if (
+          prev &&
+          foundAction &&
+          prev.type === foundAction.type &&
+          prev.id === foundAction.id &&
+          prev.solved === foundAction.solved
+        ) {
+          return prev;
+        }
+        return foundAction;
+      });
 
       animationFrameId = requestAnimationFrame(render);
-    };
+    } catch (renderErr) {
+      console.error('[Render Loop Exception]:', renderErr);
+      animationFrameId = requestAnimationFrame(render);
+    }
+  };
 
-    render();
+  render();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
@@ -2665,7 +2700,6 @@ export default function App() {
               borderRadius: '8px',
               boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
               zIndex: 15,
-              position: 'relative',
               overflow: 'hidden'
             }}
           >
