@@ -44,11 +44,23 @@ import {
   drawCrewmate,
   drawDeadBody,
   drawVent,
+  drawVentArrow,
+  drawDropshipLobby,
+  drawRoleReveal,
   drawThanosSnap,
+  VENTS,
   AVENGERS_HEROES,
   drawAvenger,
   drawFallenRelic
 } from './amongus';
+import {
+  playVentSound,
+  playEmergencyAlarm,
+  playTaskCompleteSound,
+  playKillSound,
+  playVoteSound,
+  playStepSound
+} from './audio';
 import { CrewmatePreview } from './CrewmatePreview';
 
 // Safe canvas roundRect polyfill for broad browser compatibility
@@ -361,13 +373,12 @@ function isPositionWalkable(x, y, phase) {
   const R = 14; // Operative hit-box collision radius
 
   if (phase === 'LOBBY') {
-    // Strictly restricted inside Central Waiting Deck Room:
-    if (x < 1360 || x > 2240 || y < 1060 || y > 1640) {
+    // Strictly restricted inside Dropship Waiting Room:
+    if (x < 1375 || x > 2225 || y < 1145 || y > 1630) {
       return false;
     }
-    // Prop Barriers in Lobby
-    if (Math.hypot(x - 1800, y - 1350) < 46) return false; // Central Emergency Standup
-    if (x >= 1515 && x <= 1585 && y >= 1105 && y <= 1195) return false; // Wardrobe Pod
+    // Prop Barrier: Customization Crate & Laptop Pod
+    if (Math.hypot(x - 1550, y - 1200) < 36) return false;
     return true;
   }
 
@@ -562,6 +573,16 @@ export default function App() {
     setSolvedCount(0);
     setTerminals(CLIENT_TERMINALS);
     setLocalPos({ x: 1800, y: 1420 });
+    setRoleReveal({
+      startTime: Date.now(),
+      role: 'DEV',
+      fellowMafia: [],
+      hero: selectedHero,
+      hat: selectedHat,
+      username: username.trim() || 'RedSus'
+    });
+    roleRevealRef.current = Date.now();
+    playEmergencyAlarm();
     setPlayers([
       {
         id: 'local_player',
@@ -639,6 +660,84 @@ export default function App() {
   const lastMoveEmitTime = useRef(0);
   const particlesRef = useRef([]);
 
+  // Impostor Venting State & Refs
+  const [isVented, setIsVented] = useState(false);
+  const isVentedRef = useRef(false);
+  const [currentVentId, setCurrentVentId] = useState(null);
+  const currentVentIdRef = useRef(null);
+  const ventAnimMap = useRef({});
+
+  // Role Reveal Intro State & Ref
+  const [roleReveal, setRoleReveal] = useState(null);
+  const roleRevealRef = useRef(null);
+
+  const triggerVentAnimation = (ventId) => {
+    ventAnimMap.current[ventId] = {
+      startTime: Date.now(),
+      duration: 380
+    };
+    playVentSound();
+  };
+
+  const handleEnterVent = (vent) => {
+    if (myRole !== 'MAFIA') return;
+    triggerVentAnimation(vent.id);
+    setIsVented(true);
+    isVentedRef.current = true;
+    setCurrentVentId(vent.id);
+    currentVentIdRef.current = vent.id;
+    setLocalPos({ x: vent.x, y: vent.y });
+    socket.emit('player_move', {
+      roomId,
+      x: vent.x,
+      y: vent.y,
+      isMoving: false,
+      facingLeft: facingLeftRef.current,
+      isVented: true
+    });
+  };
+
+  const handleExitVent = () => {
+    if (!isVentedRef.current || !currentVentIdRef.current) return;
+    const vent = VENTS.find((v) => v.id === currentVentIdRef.current);
+    if (vent) {
+      triggerVentAnimation(vent.id);
+      setLocalPos({ x: vent.x, y: vent.y + 24 });
+    }
+    setIsVented(false);
+    isVentedRef.current = false;
+    setCurrentVentId(null);
+    currentVentIdRef.current = null;
+    socket.emit('player_move', {
+      roomId,
+      x: localPos.x,
+      y: localPos.y + 24,
+      isMoving: false,
+      facingLeft: facingLeftRef.current,
+      isVented: false
+    });
+  };
+
+  const handleVentTravel = (targetVentId) => {
+    const target = VENTS.find((v) => v.id === targetVentId);
+    if (!target) return;
+    if (currentVentIdRef.current) {
+      triggerVentAnimation(currentVentIdRef.current);
+    }
+    triggerVentAnimation(target.id);
+    setCurrentVentId(target.id);
+    currentVentIdRef.current = target.id;
+    setLocalPos({ x: target.x, y: target.y });
+    socket.emit('player_move', {
+      roomId,
+      x: target.x,
+      y: target.y,
+      isMoving: false,
+      facingLeft: facingLeftRef.current,
+      isVented: true
+    });
+  };
+
   // Sync players ref and playerSpeed ref for canvas loop
   useEffect(() => {
     playersRef.current = players;
@@ -662,12 +761,25 @@ export default function App() {
 
     socket.on('room_update', (data) => {
       setPhase((prevPhase) => {
-        // When transitioning from LOBBY to DAY, redirect player to their assigned main map coordinates
+        // When transitioning from LOBBY to DAY, trigger 3.5s Role Reveal Screen and redirect player
         if (prevPhase === 'LOBBY' && data.phase === 'DAY') {
+          setRoleReveal({
+            startTime: Date.now(),
+            role: data.myRole || 'DEV',
+            fellowMafia: data.fellowMafia || [],
+            hero: selectedHero,
+            hat: selectedHat,
+            username: username.trim() || 'Player'
+          });
+          roleRevealRef.current = Date.now();
+          playEmergencyAlarm();
           const self = (data.players || []).find((p) => p.id === socket.id);
           if (self && self.x && self.y) {
             setLocalPos({ x: self.x, y: self.y });
           }
+        }
+        if (prevPhase !== 'VOTING' && data.phase === 'VOTING') {
+          playEmergencyAlarm();
         }
         return data.phase;
       });
@@ -714,15 +826,18 @@ export default function App() {
       setTimer(newTimer);
     });
 
-    socket.on('player_moved', ({ id, x, y, isMoving, facingLeft }) => {
+    socket.on('player_moved', ({ id, x, y, isMoving, facingLeft, isVented }) => {
       setPlayers((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, x, y, isMoving, facingLeft } : p))
+        prev.map((p) => (p.id === id ? { ...p, x, y, isMoving, facingLeft, isVented } : p))
       );
     });
 
     socket.on('terminal_test_results', (results) => {
       setIsRunningTests(false);
       setTestResults(results);
+      if (results && results.isSolved) {
+        playTaskCompleteSound();
+      }
     });
 
     socket.on('chat_message', (msg) => {
@@ -762,7 +877,19 @@ export default function App() {
 
       const key = e.key.toLowerCase();
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'].includes(key)) {
-        keysPressed.current[key] = true;
+        if (!isVentedRef.current) {
+          keysPressed.current[key] = true;
+        } else {
+          // Inside vent: A/Left Arrow travels to first connected vent; D/Right Arrow travels to next connected vent
+          const curVent = VENTS.find((v) => v.id === currentVentIdRef.current);
+          if (curVent && curVent.connections.length > 0) {
+            if (['a', 'arrowleft'].includes(key)) {
+              handleVentTravel(curVent.connections[0]);
+            } else if (['d', 'arrowright'].includes(key)) {
+              handleVentTravel(curVent.connections[curVent.connections.length - 1]);
+            }
+          }
+        }
       }
 
       // Proximity Action with [E]
@@ -776,38 +903,39 @@ export default function App() {
           }
         } else if (nearbyAction.type === 'emergency') {
           if (phase === 'DAY') {
+            playEmergencyAlarm();
             socket.emit('call_emergency', { roomId });
           }
         } else if (nearbyAction.type === 'wardrobe') {
           setShowWardrobe(true);
+        } else if (nearbyAction.type === 'vent' && myRole === 'MAFIA') {
+          const nearbyVent = VENTS.find((v) => v.id === nearbyAction.id);
+          if (nearbyVent) handleEnterVent(nearbyVent);
         }
       }
 
       // Sabotage Action with [Q] (Mafia only in Night phase)
       if (key === 'q' && myRole === 'MAFIA' && phase === 'NIGHT' && nearbyAction && nearbyAction.type === 'terminal') {
+        playKillSound();
         socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id });
       }
 
       // Report Dead Body / Call Meeting with [R]
       if (key === 'r' && phase === 'DAY') {
+        playEmergencyAlarm();
         socket.emit('call_emergency', { roomId });
       }
 
-      // Vent Action with [V] (Mafia fast-travel)
+      // Vent Action with [V] (Authentic Impostor Vent enter/exit)
       if (key === 'v' && myRole === 'MAFIA') {
-        const vents = [
-          { x: 2180, y: 1100 },
-          { x: 1390, y: 1600 },
-          { x: 1420, y: 750 },
-          { x: 2180, y: 1850 },
-          { x: 950, y: 1960 },
-          { x: 1420, y: 2460 },
-          { x: 2880, y: 1250 }
-        ];
-        const currentVentIdx = vents.findIndex(v => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 120);
-        const nextVent = vents[(currentVentIdx + 1) % vents.length];
-        setLocalPos({ x: nextVent.x, y: nextVent.y });
-        socket.emit('player_move', { roomId, x: nextVent.x, y: nextVent.y, isMoving: false, facingLeft: false });
+        if (isVentedRef.current) {
+          handleExitVent();
+        } else {
+          const nearbyVent = VENTS.find((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85);
+          if (nearbyVent) {
+            handleEnterVent(nearbyVent);
+          }
+        }
       }
 
       // Toggle Mini-Map with [M]
@@ -862,9 +990,10 @@ export default function App() {
       if (k['a'] || k['arrowleft']) dx -= 1;
       if (k['d'] || k['arrowright']) dx += 1;
 
-      const isMoving = (dx !== 0 || dy !== 0) && activeTerminal === null && phase !== 'VOTING' && phase !== 'GAME_OVER';
+      const isMoving = !isVentedRef.current && (dx !== 0 || dy !== 0) && activeTerminal === null && phase !== 'VOTING' && phase !== 'GAME_OVER';
 
       if (isMoving) {
+        playStepSound();
         if (dx < 0) facingLeftRef.current = true;
         if (dx > 0) facingLeftRef.current = false;
 
@@ -1449,242 +1578,253 @@ export default function App() {
       ctx.restore();
 
       // =======================================================================
-      // THE SKELD: CAFETERIA & CENTRAL EMERGENCY DECK (x: 1340-2260, y: 1040-1660)
+      // THE SKELD: DROPSHIP WAITING ROOM (LOBBY) vs CAFETERIA & VENTS (IN GAME)
       // =======================================================================
-      // Authentic Skeld metal deck floor
-      ctx.fillStyle = '#627184';
-      ctx.fillRect(1340, 1040, 920, 620);
+      if (phase === 'LOBBY') {
+        // Authentic Big Dropship Waiting Room with Space Viewport, Pilot Seats & Laptop Crate
+        drawDropshipLobby(ctx, { x1: 1340, y1: 1040, x2: 2260, y2: 1660 }, time);
+      } else {
+        // Authentic Skeld metal deck floor
+        ctx.fillStyle = '#627184';
+        ctx.fillRect(1340, 1040, 920, 620);
 
-      // Floor metal panel seams
-      ctx.strokeStyle = '#485566';
-      ctx.lineWidth = 2;
-      for (let px = 1340; px <= 2260; px += 115) {
-        ctx.beginPath();
-        ctx.moveTo(px, 1040);
-        ctx.lineTo(px, 1660);
-        ctx.stroke();
-      }
-      for (let py = 1040; py <= 1660; py += 103) {
-        ctx.beginPath();
-        ctx.moveTo(1340, py);
-        ctx.lineTo(2260, py);
-        ctx.stroke();
-      }
-
-      // Cafeteria thick boundary walls (The Skeld dark spaceship hull)
-      ctx.strokeStyle = '#222936';
-      ctx.lineWidth = 10;
-      ctx.strokeRect(1340, 1040, 920, 620);
-      ctx.strokeStyle = '#384456';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(1345, 1045, 910, 610);
-
-      // Room Title
-      ctx.font = "900 18px 'Inter', sans-serif";
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.textAlign = 'center';
-      ctx.fillText('CAFETERIA', 1800, 1100);
-
-      // Helper function to draw authentic Skeld round dining tables with surrounding stools
-      const drawDiningTable = (tx, ty) => {
-        ctx.save();
-        // Stool positions around table
-        const stoolOffsets = [
-          { dx: -55, dy: 0 },
-          { dx: 55, dy: 0 },
-          { dx: 0, dy: -55 },
-          { dx: 0, dy: 55 }
-        ];
-        stoolOffsets.forEach((s) => {
-          // Stool shadow
+        // Floor metal panel seams
+        ctx.strokeStyle = '#485566';
+        ctx.lineWidth = 2;
+        for (let px = 1340; px <= 2260; px += 115) {
           ctx.beginPath();
-          ctx.arc(tx + s.dx, ty + s.dy + 3, 13, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-          ctx.fill();
-          // Stool body
-          ctx.beginPath();
-          ctx.arc(tx + s.dx, ty + s.dy, 13, 0, Math.PI * 2);
-          ctx.fillStyle = '#475569';
-          ctx.fill();
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 2.5;
+          ctx.moveTo(px, 1040);
+          ctx.lineTo(px, 1660);
           ctx.stroke();
-          // Stool center bolt
+        }
+        for (let py = 1040; py <= 1660; py += 103) {
           ctx.beginPath();
-          ctx.arc(tx + s.dx, ty + s.dy, 4, 0, Math.PI * 2);
+          ctx.moveTo(1340, py);
+          ctx.lineTo(2260, py);
+          ctx.stroke();
+        }
+
+        // Cafeteria thick boundary walls (The Skeld dark spaceship hull)
+        ctx.strokeStyle = '#222936';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(1340, 1040, 920, 620);
+        ctx.strokeStyle = '#384456';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(1345, 1045, 910, 610);
+
+        // Room Title
+        ctx.font = "900 18px 'Inter', sans-serif";
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.textAlign = 'center';
+        ctx.fillText('CAFETERIA', 1800, 1100);
+
+        // Helper function to draw authentic Skeld round dining tables with surrounding stools
+        const drawDiningTable = (tx, ty) => {
+          ctx.save();
+          // Stool positions around table
+          const stoolOffsets = [
+            { dx: -55, dy: 0 },
+            { dx: 55, dy: 0 },
+            { dx: 0, dy: -55 },
+            { dx: 0, dy: 55 }
+          ];
+          stoolOffsets.forEach((s) => {
+            // Stool shadow
+            ctx.beginPath();
+            ctx.arc(tx + s.dx, ty + s.dy + 3, 13, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.fill();
+            // Stool body
+            ctx.beginPath();
+            ctx.arc(tx + s.dx, ty + s.dy, 13, 0, Math.PI * 2);
+            ctx.fillStyle = '#475569';
+            ctx.fill();
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            // Stool center bolt
+            ctx.beginPath();
+            ctx.arc(tx + s.dx, ty + s.dy, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fill();
+          });
+
+          // Table ground shadow
+          ctx.beginPath();
+          ctx.ellipse(tx, ty + 8, 44, 40, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.fill();
+
+          // Table surface outer rim
+          ctx.beginPath();
+          ctx.arc(tx, ty, 42, 0, Math.PI * 2);
           ctx.fillStyle = '#94a3b8';
           ctx.fill();
-        });
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
 
-        // Table ground shadow
+          // Inner table top (2-tone cell shaded)
+          ctx.beginPath();
+          ctx.arc(tx, ty, 35, 0, Math.PI * 2);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fill();
+
+          // Shaded half
+          ctx.save();
+          ctx.clip();
+          ctx.beginPath();
+          ctx.rect(tx - 35, ty, 70, 35);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fill();
+          ctx.restore();
+
+          // Center plate / bolts
+          ctx.beginPath();
+          ctx.arc(tx, ty, 10, 0, Math.PI * 2);
+          ctx.fillStyle = '#64748b';
+          ctx.fill();
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.restore();
+        };
+
+        // 4 Cafeteria Dining Tables
+        drawDiningTable(1520, 1220);
+        drawDiningTable(2080, 1220);
+        drawDiningTable(1520, 1480);
+        drawDiningTable(2080, 1480);
+
+        // Central Emergency Button Meeting Table at (1800, 1350)
+        ctx.save();
+        ctx.translate(1800, 1350);
+
+        // Shadow
         ctx.beginPath();
-        ctx.ellipse(tx, ty + 8, 44, 40, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.arc(0, 6, 68, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fill();
 
-        // Table surface outer rim
+        // Outer table base
         ctx.beginPath();
-        ctx.arc(tx, ty, 42, 0, Math.PI * 2);
+        ctx.arc(0, 0, 66, 0, Math.PI * 2);
+        ctx.fillStyle = '#475569';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Hazard warning yellow/black diagonal ring
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, 60, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = '#eab308';
+        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 10;
+        for (let hx = -80; hx <= 80; hx += 16) {
+          ctx.beginPath();
+          ctx.moveTo(hx - 20, -70);
+          ctx.lineTo(hx + 20, 70);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Inner steel platform
+        ctx.beginPath();
+        ctx.arc(0, 0, 48, 0, Math.PI * 2);
         ctx.fillStyle = '#94a3b8';
         ctx.fill();
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3.5;
         ctx.stroke();
 
-        // Inner table top (2-tone cell shaded)
+        // Red Emergency Button Pedestal
         ctx.beginPath();
-        ctx.arc(tx, ty, 35, 0, Math.PI * 2);
-        ctx.fillStyle = '#cbd5e1';
+        ctx.arc(0, 0, 32, 0, Math.PI * 2);
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Pulsing Emergency Button itself
+        const pulseEmergency = Math.sin(time * 4) * 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 24 + pulseEmergency, 0, Math.PI * 2);
+        ctx.fillStyle = '#dc2626';
+        ctx.fill();
+        ctx.strokeStyle = '#b91c1c';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // White Specular Crescent on Button
+        ctx.beginPath();
+        ctx.ellipse(-5, -6, 10, 5, -0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.fill();
 
-        // Shaded half
-        ctx.save();
-        ctx.clip();
+        // Protective Glass Dome
         ctx.beginPath();
-        ctx.rect(tx - 35, ty, 70, 35);
-        ctx.fillStyle = '#94a3b8';
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(224, 242, 254, 0.22)';
         ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Text label
+        ctx.font = "900 8px 'Inter', sans-serif";
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText('EMERGENCY', 0, 3);
+
         ctx.restore();
 
-        // Center plate / bolts
+        // Decontamination Wardrobe Pod / Laptop Station at (1550, 1140)
+        ctx.save();
+        ctx.translate(1550, 1140);
+        // Wooden crate
         ctx.beginPath();
-        ctx.arc(tx, ty, 10, 0, Math.PI * 2);
-        ctx.fillStyle = '#64748b';
+        ctx.roundRect(-24, -18, 48, 36, 4);
+        ctx.fillStyle = '#854d0e';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        // Laptop open
+        ctx.beginPath();
+        ctx.roundRect(-14, -12, 28, 16, 2);
+        ctx.fillStyle = '#38bdf8';
         ctx.fill();
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.stroke();
-
+        ctx.font = "900 8px 'Inter', sans-serif";
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText('CUSTOMIZE', 0, 28);
         ctx.restore();
-      };
 
-      // 4 Cafeteria Dining Tables
-      drawDiningTable(1520, 1220);
-      drawDiningTable(2080, 1220);
-      drawDiningTable(1520, 1480);
-      drawDiningTable(2080, 1480);
-
-      // Central Emergency Button Meeting Table at (1800, 1350)
-      ctx.save();
-      ctx.translate(1800, 1350);
-
-      // Shadow
-      ctx.beginPath();
-      ctx.arc(0, 6, 68, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fill();
-
-      // Outer table base
-      ctx.beginPath();
-      ctx.arc(0, 0, 66, 0, Math.PI * 2);
-      ctx.fillStyle = '#475569';
-      ctx.fill();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-      // Hazard warning yellow/black diagonal ring
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(0, 0, 60, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.fillStyle = '#eab308';
-      ctx.fill();
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 10;
-      for (let hx = -80; hx <= 80; hx += 16) {
-        ctx.beginPath();
-        ctx.moveTo(hx - 20, -70);
-        ctx.lineTo(hx + 20, 70);
-        ctx.stroke();
+        // Authentic Skeld Interconnected Vents across the Starship
+        VENTS.forEach((v) => {
+          const isHovered = myRole === 'MAFIA' && Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85;
+          let openProg = 0;
+          const anim = ventAnimMap.current[v.id];
+          if (anim) {
+            const p = (Date.now() - anim.startTime) / anim.duration;
+            if (p < 1) openProg = Math.sin(p * Math.PI);
+            else delete ventAnimMap.current[v.id];
+          }
+          if (isVentedRef.current && currentVentIdRef.current === v.id) {
+            openProg = Math.max(openProg, 0.2);
+          }
+          drawVent(ctx, v.x, v.y, openProg, isHovered);
+        });
       }
-      ctx.restore();
-
-      // Inner steel platform
-      ctx.beginPath();
-      ctx.arc(0, 0, 48, 0, Math.PI * 2);
-      ctx.fillStyle = '#94a3b8';
-      ctx.fill();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
-
-      // Red Emergency Button Pedestal
-      ctx.beginPath();
-      ctx.arc(0, 0, 32, 0, Math.PI * 2);
-      ctx.fillStyle = '#7f1d1d';
-      ctx.fill();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Pulsing Emergency Button itself
-      const pulseEmergency = Math.sin(time * 4) * 2;
-      ctx.beginPath();
-      ctx.arc(0, 0, 24 + pulseEmergency, 0, Math.PI * 2);
-      ctx.fillStyle = '#dc2626';
-      ctx.fill();
-      ctx.strokeStyle = '#b91c1c';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // White Specular Crescent on Button
-      ctx.beginPath();
-      ctx.ellipse(-5, -6, 10, 5, -0.4, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.fill();
-
-      // Protective Glass Dome
-      ctx.beginPath();
-      ctx.arc(0, 0, 30, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(224, 242, 254, 0.22)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Text label
-      ctx.font = "900 8px 'Inter', sans-serif";
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.fillText('EMERGENCY', 0, 3);
-
-      ctx.restore();
-
-      // Decontamination Wardrobe Pod / Laptop Station at (1550, 1140)
-      ctx.save();
-      ctx.translate(1550, 1140);
-      // Wooden crate
-      ctx.beginPath();
-      ctx.roundRect(-24, -18, 48, 36, 4);
-      ctx.fillStyle = '#854d0e';
-      ctx.fill();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      // Laptop open
-      ctx.beginPath();
-      ctx.roundRect(-14, -12, 28, 16, 2);
-      ctx.fillStyle = '#38bdf8';
-      ctx.fill();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.font = "900 8px 'Inter', sans-serif";
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.fillText('CUSTOMIZE', 0, 28);
-      ctx.restore();
-
-      // Authentic Skeld Vents in room corners
-      drawVent(ctx, 2180, 1100, Math.hypot(localPos.x - 2180, localPos.y - 1100) < 60);
-      drawVent(ctx, 1390, 1600, Math.hypot(localPos.x - 1390, localPos.y - 1600) < 60);
-      drawVent(ctx, 1420, 750, Math.hypot(localPos.x - 1420, localPos.y - 750) < 60);
-      drawVent(ctx, 2180, 1850, Math.hypot(localPos.x - 2180, localPos.y - 1850) < 60);
-      drawVent(ctx, 950, 1960, Math.hypot(localPos.x - 950, localPos.y - 1960) < 60);
-      drawVent(ctx, 1420, 2460, Math.hypot(localPos.x - 1420, localPos.y - 2460) < 60);
-      drawVent(ctx, 2880, 1250, Math.hypot(localPos.x - 2880, localPos.y - 1250) < 60);
-      drawVent(ctx, 2880, 800, Math.hypot(localPos.x - 2880, localPos.y - 800) < 60);
 
       // =======================================================================
       // SPECIFIC BARRIERS: LOBBY LOCKDOWN FORCEFIELDS vs ACTIVE GAME CLEARANCE
@@ -1831,6 +1971,10 @@ export default function App() {
 
       allRoster.forEach((p) => {
         const isLocal = p.id === socket.id || p.id === 'local_player';
+        // If player is concealed inside a ventilation shaft, skip rendering
+        if (isLocal && isVentedRef.current) return;
+        if (!isLocal && p.isVented) return;
+
         const px = isLocal ? localPos.x : p.x;
         const py = isLocal ? localPos.y : p.y;
         const isFacingLeft = isLocal ? facingLeftRef.current : p.facingLeft;
@@ -1869,6 +2013,22 @@ export default function App() {
 
         ctx.restore();
       });
+
+      // 3. Draw in-vent navigation arrows for vented local player
+      if (isVentedRef.current && currentVentIdRef.current) {
+        const curVent = VENTS.find((v) => v.id === currentVentIdRef.current);
+        if (curVent) {
+          curVent.connections.forEach((connId) => {
+            const targetVent = VENTS.find((v) => v.id === connId);
+            if (targetVent) {
+              const angle = Math.atan2(targetVent.y - curVent.y, targetVent.x - curVent.x);
+              const ax = curVent.x + Math.cos(angle) * 54;
+              const ay = curVent.y + Math.sin(angle) * 54;
+              drawVentArrow(ctx, ax, ay, angle, false);
+            }
+          });
+        }
+      }
 
       // =======================================================================
       // NIGHT PHASE: FLASHLIGHT FOG-OF-WAR (Developers) vs NIGHT VISION (Mafia)
@@ -1914,9 +2074,21 @@ export default function App() {
       ctx.restore(); // Restore camera translation
 
       // =======================================================================
-      // PROXIMITY ACTION DETECTION (Within 70px)
+      // PROXIMITY ACTION DETECTION (Within 80px)
       // =======================================================================
       let foundAction = null;
+
+      // Check Vents for Impostor (within 85px)
+      if (myRole === 'MAFIA' && !foundAction && phase !== 'LOBBY' && !isVentedRef.current) {
+        const nearbyVent = VENTS.find((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85);
+        if (nearbyVent) {
+          foundAction = {
+            type: 'vent',
+            id: nearbyVent.id,
+            name: `Ventilation Duct [V] (${nearbyVent.name})`
+          };
+        }
+      }
 
       // Check Terminals
       terminals.forEach((term) => {
@@ -1939,11 +2111,11 @@ export default function App() {
         };
       }
 
-      // Check Wardrobe Pod (1550, 1150)
-      if (!foundAction && Math.hypot(localPos.x - 1550, localPos.y - 1150) < 80) {
+      // Check Wardrobe Pod / Customization Laptop (1550, 1200)
+      if (!foundAction && Math.hypot(localPos.x - 1550, localPos.y - 1200) < 85) {
         foundAction = {
           type: 'wardrobe',
-          name: 'Decontamination Wardrobe Pod'
+          name: phase === 'LOBBY' ? 'Customization Laptop Pod [E]' : 'Decontamination Wardrobe Pod [E]'
         };
       }
 
@@ -1961,6 +2133,30 @@ export default function App() {
         }
         return foundAction;
       });
+
+      // =======================================================================
+      // ROLE REVEAL INTRO SPLASH OVERLAY (3.5 SECONDS)
+      // =======================================================================
+      if (roleRevealRef.current) {
+        const elapsed = (Date.now() - roleRevealRef.current) / 1000;
+        if (elapsed <= 3.5) {
+          drawRoleReveal(
+            ctx,
+            canvas.width,
+            canvas.height,
+            myRole,
+            fellowMafia,
+            selectedHero,
+            selectedHat,
+            username.trim() || 'Player',
+            time,
+            elapsed
+          );
+        } else {
+          roleRevealRef.current = null;
+          setRoleReveal(null);
+        }
+      }
 
       animationFrameId = requestAnimationFrame(render);
     } catch (renderErr) {
@@ -2720,45 +2916,99 @@ export default function App() {
               alignItems: 'flex-end'
             }}
           >
-            {/* VENT Button (Impostor/Mafia only) */}
-            {myRole === 'MAFIA' && (
-              <button
-                type="button"
-                onClick={() => {
-                  const vents = [
-                    { x: 2180, y: 1100 },
-                    { x: 1390, y: 1600 },
-                    { x: 1420, y: 750 },
-                    { x: 2180, y: 1850 },
-                    { x: 950, y: 1960 },
-                    { x: 1420, y: 2460 },
-                    { x: 2880, y: 1250 }
-                  ];
-                  const currentVentIdx = vents.findIndex(v => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 120);
-                  const nextVent = vents[(currentVentIdx + 1) % vents.length];
-                  setLocalPos({ x: nextVent.x, y: nextVent.y });
-                  socket.emit('player_move', { roomId, x: nextVent.x, y: nextVent.y, isMoving: false, facingLeft: false });
-                }}
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  backgroundColor: '#1e1b4b',
-                  border: '3px solid #8b5cf6',
-                  color: '#ffffff',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 0 16px rgba(139, 92, 246, 0.4)',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Teleport through ventilation shafts [V]"
-              >
-                <span style={{ fontSize: '18px' }}>💨</span>
-                <span style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '0.5px' }}>VENT [V]</span>
-              </button>
+            {/* VENT / HOP / EXIT Controls (Impostor/Mafia in Day/Night phases) */}
+            {myRole === 'MAFIA' && phase !== 'LOBBY' && (
+              <>
+                {isVented ? (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {/* Fast Jump to Connected Network Vents */}
+                    {(() => {
+                      const curVent = VENTS.find((v) => v.id === currentVentId);
+                      return (curVent?.connections || []).map((connId) => {
+                        const tv = VENTS.find((v) => v.id === connId);
+                        return (
+                          <button
+                            key={connId}
+                            type="button"
+                            onClick={() => handleVentTravel(connId)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '20px',
+                              backgroundColor: '#3b0764',
+                              border: '2px solid #a855f7',
+                              color: '#ffffff',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 0 12px rgba(168, 85, 247, 0.5)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <span>➔</span>
+                            <span>{tv?.name.split(' ')[0]}</span>
+                          </button>
+                        );
+                      });
+                    })()}
+
+                    {/* Exit Vent Button */}
+                    <button
+                      type="button"
+                      onClick={handleExitVent}
+                      style={{
+                        width: '74px',
+                        height: '74px',
+                        borderRadius: '50%',
+                        backgroundColor: '#581c87',
+                        border: '4px solid #c084fc',
+                        color: '#ffffff',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 0 22px rgba(192, 132, 252, 0.7)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title="Exit ventilation duct [V]"
+                    >
+                      <span style={{ fontSize: '20px' }}>🚪</span>
+                      <span style={{ fontSize: '9px', fontWeight: 900, marginTop: '2px' }}>EXIT [V]</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nearbyVent = VENTS.find((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85);
+                      if (nearbyVent) handleEnterVent(nearbyVent);
+                    }}
+                    disabled={!VENTS.some((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85)}
+                    style={{
+                      width: '74px',
+                      height: '74px',
+                      borderRadius: '50%',
+                      backgroundColor: VENTS.some((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85) ? '#4c1d95' : '#1e1b4b',
+                      border: VENTS.some((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85) ? '4px solid #a855f7' : '3px solid #6b21a8',
+                      color: '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: VENTS.some((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85) ? 'pointer' : 'default',
+                      opacity: VENTS.some((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85) ? 1 : 0.5,
+                      boxShadow: VENTS.some((v) => Math.hypot(localPos.x - v.x, localPos.y - v.y) < 85) ? '0 0 20px rgba(168, 85, 247, 0.6)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Enter ventilation shafts [V]"
+                  >
+                    <span style={{ fontSize: '20px' }}>💨</span>
+                    <span style={{ fontSize: '9px', fontWeight: 900, marginTop: '2px' }}>VENT [V]</span>
+                  </button>
+                )}
+              </>
             )}
 
             {/* KILL / SABOTAGE Button (Impostor/Mafia in Night phase) */}
@@ -2767,6 +3017,7 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   if (nearbyAction && nearbyAction.type === 'terminal') {
+                    playKillSound();
                     socket.emit('sabotage_terminal', { roomId, terminalId: nearbyAction.id });
                   }
                 }}
@@ -2797,6 +3048,7 @@ export default function App() {
               type="button"
               onClick={() => {
                 if (phase === 'DAY') {
+                  playEmergencyAlarm();
                   socket.emit('call_emergency', { roomId });
                 }
               }}
@@ -2837,7 +3089,13 @@ export default function App() {
                 } else if (nearbyAction.type === 'wardrobe') {
                   setShowWardrobe(true);
                 } else if (nearbyAction.type === 'emergency') {
-                  if (phase === 'DAY') socket.emit('call_emergency', { roomId });
+                  if (phase === 'DAY') {
+                    playEmergencyAlarm();
+                    socket.emit('call_emergency', { roomId });
+                  }
+                } else if (nearbyAction.type === 'vent' && myRole === 'MAFIA') {
+                  const nearbyVent = VENTS.find((v) => v.id === nearbyAction.id);
+                  if (nearbyVent) handleEnterVent(nearbyVent);
                 }
               }}
               style={{
@@ -3612,6 +3870,7 @@ export default function App() {
                   {suspect.id !== socket.id && !votedSuspect && (
                     <button
                       onClick={() => {
+                        playVoteSound();
                         setVotedSuspect(suspect.id);
                         socket.emit('cast_vote', { roomId, suspectId: suspect.id });
                       }}
@@ -3641,6 +3900,7 @@ export default function App() {
           {!votedSuspect && (
             <button
               onClick={() => {
+                playVoteSound();
                 setVotedSuspect('SKIP');
                 socket.emit('cast_vote', { roomId, suspectId: 'SKIP' });
               }}
