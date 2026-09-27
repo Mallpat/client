@@ -24,3 +24,9 @@ pnpm-debug.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Screenshots and temp Chrome profile (local dev only)
+temp_chrome_profile/
+screenshot_*.png
+scripts/
+
